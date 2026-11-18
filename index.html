@@ -649,7 +649,7 @@ const DIETS = [
   ['vegan', 'vegan', /vegan|rostlinn/]
 ];
 // Název bez diakritiky a interpunkce; „bare“ navíc bez velikosti balení ("Rohlík 43g" -> "rohlik")
-const plain = s => norm(s).replace(/[^a-z0-9 -]+/g, ' ').replace(/\s+/g, ' ').trim();
+const plain = s => norm(s).replace(/[^a-z0-9 -]+/g, ' ').replace(/\brohlik cz\b|\brohlik(uv|ova|ovo)\b/g, ' ').replace(/\s+/g, ' ').trim();
 const bare = s => plain(norm(s).replace(/\d+([.,]\d+)?\s*(x\s*\d+([.,]\d+)?\s*)?(kg|g|ks|ml|l)\b/g, ' '));
 const prefWords = s => norm(s || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
 // Dá se nabídka použít podle nastavení (obchod, věrnostní karty, platnost)?
@@ -976,7 +976,7 @@ async function loadHistory(rows){
     HIST[k] = 'wait';
     try {
       const slug = (p.url.match(/\/sleva\/([a-z0-9-]+)$/) || [])[1];
-      const d = slug ? await (await fetch('/api/historie?slug=' + slug + '&mnozstvi=' + encodeURIComponent(o.mnozstvi))).json() : {};
+      const d = slug ? await getJSON('/api/historie?slug=' + slug + '&mnozstvi=' + encodeURIComponent(o.mnozstvi)) : {};
       HIST[k] = d.rady || null;
     } catch (e) { HIST[k] = null; }
   }
@@ -1118,13 +1118,13 @@ async function load(item, fresh){
   item.loading = true; item.error = null; render();
   try {
     const r = await fetch('/api/hledej?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''));
-    const d = await r.json();
+    const d = await readJSON(r);
     if (d.chyba) throw new Error(d.chyba);
     if (item.cur || (item.dk && DEFS[item.dk] && DEFS[item.dk].slugs)){
       // zapamatované nebo výchozí produkty stáhnu přímo z jejich stránek: jsou tam všechny akce, i když zrovna žádná není
       const slugy = item.cur ? Object.keys(item.sel).filter(u => item.sel[u]).map(u => (u.match(/\/sleva\/([a-z0-9-]+)$/) || [])[1]).filter(Boolean) : DEFS[item.dk].slugs;
       if (slugy.length) try {
-        const pd = await (await fetch('/api/produkty?slugy=' + slugy.join(',') + (fresh ? '&fresh=1' : ''))).json();
+        const pd = await getJSON('/api/produkty?slugy=' + slugy.join(',') + (fresh ? '&fresh=1' : ''));
         for (const p of pd.produkty || []){
           const i = d.produkty.findIndex(x => x.url === p.url);
           if (i >= 0) d.produkty[i] = p; else d.produkty.push(p);
@@ -1135,15 +1135,15 @@ async function load(item, fresh){
     const known0 = new Set(d.produkty.map(p => p.url));
     for (const dq of dietQueries(item)) try {
       const parts = await Promise.all([
-        fetch('/api/hledej?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(r => r.json()).catch(() => ({})),
-        fetch('/api/eshopy?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(r => r.json()).catch(() => ({}))]);
+        fetch('/api/hledej?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(readJSON).catch(() => ({})),
+        fetch('/api/eshopy?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(readJSON).catch(() => ({}))]);
       for (const x of parts) for (const p of x.produkty || []) if (!known0.has(p.url)){ known0.add(p.url); d.produkty.push(p); }
     } catch (e) {}
     item._dietLoaded = dietKey();
     // běžné ceny z e-shopů (Rohlík, Košík, Tesco, Globus, Lidl)
     item.eshopErr = null;
     try {
-      const e = await (await fetch('/api/eshopy?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''))).json();
+      const e = await getJSON('/api/eshopy?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''));
       if (e.chyba) throw new Error(e.chyba);
       const known = new Set(d.produkty.map(p => p.url));
       for (const p of e.produkty || []) if (!known.has(p.url)){ known.add(p.url); d.produkty.push(p); }
@@ -1157,7 +1157,7 @@ async function load(item, fresh){
     }
     if (added){ renderSettings(); if (state.loc) fetchShops(); }
   } catch (e) {
-    item.error = e instanceof TypeError ? 'Nejde se spojit s programem app.py. Běží ještě?' : (e.message || 'Něco se nepovedlo.');
+    item.error = e instanceof TypeError ? 'Nejde se spojit se serverem Papírku. Jsi online (a běží app.py, pokud ho pouštíš doma)?' : (e.message || 'Něco se nepovedlo.');
   }
   item.loading = false; render();
 }
@@ -1173,7 +1173,19 @@ function renderLoc(){
 }
 function setLocMsg(t){ locMsg = t; renderLoc(); }
 function openSettings(){ $('set').open = true; $('set').scrollIntoView({block: 'nearest'}); }
-const errText = e => e instanceof TypeError ? 'Nejde se spojit s programem app.py. Běží ještě?' : (e.message || 'Něco se nepovedlo.');
+// Odpověď serveru jako JSON. Když místo ní přijde webová stránka (server se probouzí nebo se nasazuje
+// nová verze), vrátí srozumitelnou chybu místo „Unexpected token <“.
+async function readJSON(r){
+  const t = await r.text();
+  try { return JSON.parse(t); }
+  catch (e) {
+    const err = new Error(r.status === 401 ? 'Papírek chce znovu heslo, obnov stránku.'
+      : 'Server se právě probouzí nebo nahrává novou verzi. Zkus to za chvilku znovu.');
+    err.wake = true; throw err;
+  }
+}
+const getJSON = url => fetch(url).then(readJSON);
+const errText = e => e instanceof TypeError ? 'Nejde se spojit se serverem Papírku. Jsi online (a běží app.py, pokud ho pouštíš doma)?' : (e.message || 'Něco se nepovedlo.');
 
 // Zeptá se prohlížeče na polohu (prohlížeč si vyžádá tvoje povolení)
 // Nejdřív rychle a úsporně (Wi-Fi, mobilní síť, poloha z posledních minut), když to nevyjde, zkusí GPS.
@@ -1201,7 +1213,7 @@ async function locateByAddress(){
   const a = $('addr').value.trim(); if (!a) return;
   setLocMsg('Hledám adresu…');
   try {
-    const d = await (await fetch('/api/poloha?adresa=' + encodeURIComponent(a))).json();
+    const d = await getJSON('/api/poloha?adresa=' + encodeURIComponent(a));
     if (d.chyba) throw new Error(d.chyba);
     await setLoc(d.lat, d.lon, d.nazev);
   } catch (e) { setLocMsg(errText(e)); }
@@ -1222,7 +1234,7 @@ async function fetchShops(){
 async function fetchShopsNow(){
   setLocMsg('Hledám obchody v okolí…');
   try {
-    const d = await (await fetch(`/api/obchody?lat=${state.loc.lat}&lon=${state.loc.lon}&slugy=` + encodeURIComponent(Object.keys(state.shops).filter(s => !ONLINE.has(s)).join(',')))).json();
+    const d = await getJSON(`/api/obchody?lat=${state.loc.lat}&lon=${state.loc.lon}&slugy=` + encodeURIComponent(Object.keys(state.shops).filter(s => !ONLINE.has(s)).join(',')));
     if (d.chyba) throw new Error(d.chyba);
     radius = d.polomer_km || radius;
     const later = new Set(d.chybi || []);          // ty server ještě dohledává
@@ -1243,7 +1255,10 @@ async function fetchShopsNow(){
       if (shopTries <= 10){ locMsg = `Dohledávám další obchody v okolí (zbývá ${later.size})…`; setTimeout(fetchShops, 3000); }
       else shopTries = 0;
     } else shopTries = 0;
-  } catch (e) { locMsg = 'Obchody v okolí se nepodařilo najít: ' + errText(e); }
+  } catch (e) {
+    locMsg = 'Obchody v okolí se nepodařilo najít: ' + errText(e);
+    if (e.wake && (shopTries = (shopTries || 0) + 1) <= 6){ locMsg += ' Zkouším to znovu…'; setTimeout(fetchShops, 8000); }
+  }
   renderSettings(); render(); renderLoc();
 }
 

@@ -43,7 +43,7 @@ OVERPASS = ["https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter"]   # mapová data OpenStreetMap
 NOMINATIM = "https://nominatim.openstreetmap.org/search"       # převod adresy na souřadnice
 
-VERZE = "2026-11-18d"
+VERZE = "2026-11-18e"
 SLOZKA = os.path.dirname(os.path.abspath(__file__))
 CACHE_SOUBOR = os.path.join(SLOZKA, "cache.json")
 LADENI_SOUBOR = os.path.join(SLOZKA, "posledni_stranka.html")
@@ -948,6 +948,7 @@ def _pobocky_nominatim(lat, lon, slovo):
     for d in (0.04, 0.15):
         url = NOMINATIM + "?" + urllib.parse.urlencode({
             "q": slovo, "format": "jsonv2", "limit": 40, "bounded": 1, "countrycodes": "cz", "layer": "poi",
+            "addressdetails": 1,
             "viewbox": "%.4f,%.4f,%.4f,%.4f" % (lon - d * 1.6, lat + d, lon + d * 1.6, lat - d)})
         nalezene = []
         for r in json.loads(stahni(url, limit=15)):
@@ -955,8 +956,12 @@ def _pobocky_nominatim(lat, lon, slovo):
             nazev = r.get("name") or casti[0]
             if slovo not in _slova_nazvu(nazev) or r.get("category") not in ("shop", "amenity"):
                 continue
+            ad = r.get("address") or {}
+            ulice = " ".join(v for v in (ad.get("road") or ad.get("pedestrian") or ad.get("square"),
+                                         ad.get("house_number")) if v)
+            mesto = ad.get("city") or ad.get("town") or ad.get("village") or ad.get("suburb")
             nalezene.append({"lat": float(r["lat"]), "lon": float(r["lon"]), "nazev": nazev,
-                             "adresa": ", ".join(casti[1:3]) or None})
+                             "adresa": ", ".join(v for v in (ulice, mesto) if v) or ", ".join(casti[1:3]) or None})
         if nalezene:
             return nalezene
     return []
