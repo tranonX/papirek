@@ -43,7 +43,7 @@ OVERPASS = ["https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter"]   # mapová data OpenStreetMap
 NOMINATIM = "https://nominatim.openstreetmap.org/search"       # převod adresy na souřadnice
 
-VERZE = "2026-11-18c"
+VERZE = "2026-11-18d"
 SLOZKA = os.path.dirname(os.path.abspath(__file__))
 CACHE_SOUBOR = os.path.join(SLOZKA, "cache.json")
 LADENI_SOUBOR = os.path.join(SLOZKA, "posledni_stranka.html")
@@ -932,79 +932,101 @@ def vzdalenost_km(lat1, lon1, lat2, lon2):
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
-# Řetězce, které se na mapě hledají vždycky (jeden dotaz na okolí pak poslouží pro celý nákup)
-ZAKLADNI_RETEZCE = ["albert", "billa", "lidl", "kaufland", "penny", "tesco", "globus", "coop", "jip",
-                    "hruska", "cba", "flop", "makro", "ratio", "norma", "teta", "rossmann", "terno", "tamda"]
+PHOTON = "https://photon.komoot.io/api/"   # záložní vyhledávání míst (také nad daty OpenStreetMap)
 
 
 def _slovo_retezce(slug):
     return re.sub(r"[^a-z0-9-]", "", slug.lower()).split("-")[0]   # 'penny-market' -> 'penny'
 
 
-def _prvky_z_mapy(lat, lon, slova):
-    """Stáhne z OpenStreetMap pobočky zadaných řetězců v okolí a vrátí je ve stručné podobě."""
-    vzor = "|".join(sorted({_vzor(k) for k in slova}))
-    okoli = "(around:%d,%.5f,%.5f)" % ((OKOLI_KM + 1) * 1000, lat, lon)
-    dotaz = ('[out:json][timeout:25];('
-             'nwr["shop"]["brand"~"%s",i]%s;'
-             'nwr["shop"~"supermarket|convenience|wholesale|chemist|department_store|general|variety_store|beverages"]["name"~"%s",i]%s;'
-             ');out center tags;') % (vzor, okoli, vzor, okoli)
-    telo = urllib.parse.urlencode({"data": dotaz}).encode("utf-8")
-    chyba = None
-    for server in OVERPASS:
+def _slova_nazvu(text):
+    return set(re.findall(r"[a-z0-9]+", bez_diakritiky(text or "")))
+
+
+def _pobocky_nominatim(lat, lon, slovo):
+    """Pobočky řetězce v okolí přes vyhledávání v mapě: nejdřív blízko (asi 4 km), pak dál (asi 16 km)."""
+    for d in (0.04, 0.15):
+        url = NOMINATIM + "?" + urllib.parse.urlencode({
+            "q": slovo, "format": "jsonv2", "limit": 40, "bounded": 1, "countrycodes": "cz", "layer": "poi",
+            "viewbox": "%.4f,%.4f,%.4f,%.4f" % (lon - d * 1.6, lat + d, lon + d * 1.6, lat - d)})
+        nalezene = []
+        for r in json.loads(stahni(url, limit=15)):
+            casti = (r.get("display_name") or "").split(", ")
+            nazev = r.get("name") or casti[0]
+            if slovo not in _slova_nazvu(nazev) or r.get("category") not in ("shop", "amenity"):
+                continue
+            nalezene.append({"lat": float(r["lat"]), "lon": float(r["lon"]), "nazev": nazev,
+                             "adresa": ", ".join(casti[1:3]) or None})
+        if nalezene:
+            return nalezene
+    return []
+
+
+def _pobocky_photon(lat, lon, slovo):
+    url = PHOTON + "?" + urllib.parse.urlencode({"q": slovo, "lat": lat, "lon": lon, "limit": 20, "osm_tag": "shop"})
+    nalezene = []
+    for f in json.loads(stahni(url, limit=15)).get("features", []):
+        pr = f.get("properties") or {}
+        if slovo not in _slova_nazvu(pr.get("name")):
+            continue
+        x, y = f["geometry"]["coordinates"]
+        ulice = " ".join(v for v in (pr.get("street"), pr.get("housenumber")) if v)
+        nalezene.append({"lat": y, "lon": x, "nazev": pr.get("name"),
+                         "adresa": ", ".join(v for v in (ulice, pr.get("city")) if v) or None})
+    return nalezene
+
+
+def _dohledej_pobocky(g_lat, g_lon, slova):
+    """Na pozadí postupně dohledá pobočky řetězců kolem jednoho čtverce mapy a uloží je do paměti."""
+    for slovo in slova:
+        klic = "@pobocky:%.2f,%.2f:%s" % (g_lat, g_lon, slovo)
+        if pamet_cti(klic, 24 * 7):
+            continue
         try:
-            data = json.loads(stahni(server, data=telo, limit=30))
-            break
-        except Exception as e:   # zkusíme záložní server
-            chyba = e
-    else:
-        raise chyba
-    prvky = []
-    for el in data.get("elements", []):
-        tags = el.get("tags") or {}
-        stred = el.get("center") or el
-        if "lat" not in stred or "lon" not in stred:
-            continue
-        slova_v = set(re.findall(r"[a-z0-9]+", bez_diakritiky(" ".join(
-            x for x in (tags.get("brand"), tags.get("name"), tags.get("operator")) if x))))
-        w = sorted(slova_v & set(slova))
-        if not w:
-            continue
-        ulice = tags.get("addr:street") or tags.get("addr:place") or ""
-        cislo_domu = tags.get("addr:housenumber") or ""
-        adresa = ", ".join(x for x in ((ulice + " " + cislo_domu).strip(), tags.get("addr:city")) if x)
-        prvky.append({"lat": stred["lat"], "lon": stred["lon"], "w": w,
-                      "nazev": tags.get("name") or tags.get("brand") or "", "adresa": adresa or None})
-    return prvky
+            try:
+                p = _pobocky_nominatim(g_lat, g_lon, slovo)
+            except Exception:
+                p = _pobocky_photon(g_lat, g_lon, slovo)          # Nominatim nejede, zkusím záložní
+        except Exception:
+            continue                                               # zkusí se při dalším dotazu
+        p.sort(key=lambda b: vzdalenost_km(g_lat, g_lon, b["lat"], b["lon"]))
+        pamet_zapis(klic, {"pobocky": p[:6]})
 
 
-_mapa_zamek = threading.Lock()
+_hledani_pobocek = {}
+_hledani_zamek = threading.Lock()
 
 
 def obchody_s_pameti(lat, lon, slugy):
-    """Nejbližší pobočka každého řetězce (vzdušnou čarou). Mapu okolí si pamatuje po čtvercích asi 1 km,
-    takže další položky v seznamu ani malý posun polohy už na mapu znovu nečekají."""
+    """Nejbližší pobočka každého řetězce (vzdušnou čarou). Pobočky se pamatují po čtvercích asi 1 km.
+    Co se nestihne do pár vteřin, dohledá se na pozadí a aplikace se zeptá znovu (vrací 'chybi')."""
     slova = {s: _slovo_retezce(s) for s in sorted(set(slugy))[:60]}
     slova = {s: k for s, k in slova.items() if k}
     lat, lon = round(lat, 3), round(lon, 3)   # přesnost asi 100 m, víc mapě neposíláme
     g_lat, g_lon = round(lat, 2), round(lon, 2)
-    klic = "@mapa:%.2f,%.2f" % (g_lat, g_lon)
-    with _mapa_zamek:                           # stejné okolí se nestahuje dvakrát naráz
-        z = pamet_cti(klic, 24 * 7)
-        chybi = set(slova.values()) - set(z["slova"]) if z and "slova" in z else None
-        if z is None or "slova" not in z or chybi:
-            hledat = sorted(set(ZAKLADNI_RETEZCE) | set(slova.values()) | (set(z["slova"]) if z and "slova" in z else set()))
-            z = pamet_zapis(klic, {"slova": hledat, "prvky": _prvky_z_mapy(g_lat, g_lon, hledat)})
-    nej = {}
-    for pr in z["prvky"]:
-        km = vzdalenost_km(lat, lon, pr["lat"], pr["lon"])
-        if km > OKOLI_KM:
+    ctverec = "%.2f,%.2f" % (g_lat, g_lon)
+    klic = lambda k: "@pobocky:%s:%s" % (ctverec, k)
+    chybi = sorted({k for k in slova.values() if not pamet_cti(klic(k), 24 * 7)})
+    if chybi:
+        with _hledani_zamek:
+            vlakno = _hledani_pobocek.get(ctverec)
+            if not vlakno or not vlakno.is_alive():
+                vlakno = threading.Thread(target=_dohledej_pobocky, args=(g_lat, g_lon, chybi), daemon=True)
+                _hledani_pobocek[ctverec] = vlakno
+                vlakno.start()
+        vlakno.join(12)
+    nej, nenalezeno = {}, []
+    for slug, k in slova.items():
+        z = pamet_cti(klic(k), 24 * 7)
+        if not z:
+            nenalezeno.append(slug)
             continue
-        for slug, k in slova.items():
-            if k in pr["w"] and (slug not in nej or km < nej[slug]["km"]):
-                nej[slug] = {"km": round(km, 2), "nazev": pr["nazev"], "adresa": pr["adresa"],
-                             "lat": pr["lat"], "lon": pr["lon"]}
-    return {"obchody": nej, "polomer_km": OKOLI_KM}
+        for b in z["pobocky"]:
+            km = vzdalenost_km(lat, lon, b["lat"], b["lon"])
+            if km <= OKOLI_KM and (slug not in nej or km < nej[slug]["km"]):
+                nej[slug] = {"km": round(km, 2), "nazev": b["nazev"], "adresa": b["adresa"],
+                             "lat": b["lat"], "lon": b["lon"]}
+    return {"obchody": nej, "polomer_km": OKOLI_KM, "chybi": nenalezeno}
 
 
 def najdi_adresu(adresa):
