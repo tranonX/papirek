@@ -89,6 +89,7 @@ details.set summary{font-family:var(--display);font-weight:800;font-size:1.35rem
 .tag .lbl{font-family:var(--display);font-weight:800;font-size:1.05rem;line-height:1.1}
 .tag .sub{font-size:.82rem;overflow-wrap:anywhere}
 .tag .diff{font-size:.82rem;font-weight:800}
+.tag .diff .miss{color:#B3261E}
 .p{font-family:var(--display);font-weight:800;display:inline-flex;align-items:flex-start;line-height:1;white-space:nowrap}
 .p .d{font-size:.5em;margin-left:.08em;padding-top:.1em}
 .p .kc{font-family:var(--body);font-weight:700;font-size:.34em;align-self:flex-end;margin-left:.3em;padding-bottom:.45em}
@@ -752,8 +753,17 @@ function compute(){
   for (const set of subsets(shops, state.max)){ const r = evalSet(set, infos); if (better(r, cheap)) cheap = r; }
   for (const s of shops){ const r = evalSet([s], infos); if (better(r, single)) single = r; }
   const withKm = shops.filter(s => state.shops[s].km != null).sort((a, b) => state.shops[a].km - state.shops[b].km);
-  const near = withKm.length ? evalSet([withKm[0]], infos) : null;
-  return {infos, shops, cheap, single, near};
+  // Nejblíž = nejbližší obchod, kde koupím všechno. Když takový není, ten s nejmenším počtem chybějících věcí.
+  let near = null, nearest = null;
+  for (const s of withKm){
+    const r = evalSet([s], infos);
+    if (!nearest) nearest = r;
+    if (!near || r.unknown.length < near.unknown.length) near = r;
+    if (!r.unknown.length) break;
+  }
+  // úplně nejbližší obchod, který něco nemá (do textu: „Lidl je blíž, ale nemá chléb“)
+  const skipped = near && nearest && nearest.set[0] !== near.set[0] ? nearest : null;
+  return {infos, shops, cheap, single, near, skipped};
 }
 
 /* ============================================================
@@ -944,8 +954,10 @@ function renderSettings(){
    ============================================================ */
 function tagHTML(key, label, r, sub, cheapTotal){
   if (!r) return `<button class="tag" type="button" data-geo><span class="lbl">${label}</span><span class="sub">${sub}</span></button>`;
-  const d = r.total - cheapTotal;
-  const diff = key === 'cheap' ? 'nejnižší cena' : (cents(d) > 0 ? `o ${fmt(d)} Kč víc` : 'stejná cena');
+  const d = r.total - cheapTotal, miss = r.unknown.length;
+  // když něco chybí, cena není srovnatelná (je nižší jen proto, že se nepočítá všechno)
+  const diff = miss ? `<span class="miss">chybí ${miss} ${plural(miss, 'položka', 'položky', 'položek')}</span>`
+    : key === 'cheap' ? 'nejnižší cena' : (cents(d) > 0 ? `o ${fmt(d)} Kč víc` : 'stejná cena');
   return `<button class="tag" type="button" data-variant="${key}" aria-pressed="${state.variant === key}">
     <span class="lbl">${label}</span>${priceHTML(r.total)}
     <span class="sub">${sub}</span><span class="diff">${diff}</span>
@@ -1099,7 +1111,13 @@ function renderResults(){
   else if (state.variant === 'single')
     sum = `Všechno na jednom místě: ${esc(sName)}.` + (cents(extra) > 0 ? ` Oproti nejlevnější variantě připlatíš ${fmt(extra)} Kč.` : '');
   else
-    sum = `Nejbližší obchod: ${esc(shopName(r.set[0]))}, ${kmTxt(state.shops[r.set[0]].km)} vzdušnou čarou.` + (cents(extra) > 0 ? ` Oproti nejlevnější variantě připlatíš ${fmt(extra)} Kč.` : '');
+  {
+    const sk = c.skipped;
+    sum = (r.unknown.length ? 'Žádný obchod v okolí nemá všechno. Nejblíž je ' : 'Nejbližší obchod, kde koupíš všechno: ')
+      + `${esc(shopName(r.set[0]))}, ${kmTxt(state.shops[r.set[0]].km)} vzdušnou čarou.`
+      + (sk ? ` ${esc(shopName(sk.set[0]))} je blíž (${kmTxt(state.shops[sk.set[0]].km)}), ale ${sk.unknown.length} ${plural(sk.unknown.length, 'věc', 'věci', 'věcí')} tam nemá.` : '')
+      + (!r.unknown.length && !c.cheap.unknown.length && cents(extra) > 0 ? ` Oproti nejlevnější variantě připlatíš ${fmt(extra)} Kč.` : '');
+  }
   if (cents(r.est) > 0) sum += ` Z celkové ceny je ${fmt(r.est)} Kč odhad za zboží mimo akci.`;
   el.innerHTML = h + `<p class="sum">${sum}</p>` + alertsHTML(r) + planHTML(r);
   loadHistory([].concat(...Object.values(r.by)));
