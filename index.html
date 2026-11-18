@@ -577,15 +577,22 @@ function computeDefault(item){
   const PF = state.prefs, miss = [], has = (p, ws) => ws.some(x => norm(p.nazev).includes(x));
   const avoid = prefWords(PF.avoid);
   if (avoid.length) ps = ps.filter(p => !has(p, avoid));                 // "nechci" platí vždy
+  let rank = !dh.length && !ph.length;
+  // širší výběr pro diety: všechno, co začíná stejným slovem (chléb Šumava -> jakýkoli chléb), ne výrobky z toho
+  const w0 = ws[0] || '';
+  let pool = all.filter(p => (' ' + plain(p.nazev)).includes(' ' + w0) && !PROC.test(plain(p.nazev)));
+  if (avoid.length) pool = pool.filter(p => !has(p, avoid));
   for (const [k, label, re] of DIETS) if (PF[k]){
-    const f = ps.filter(p => re.test(norm(p.nazev)));
-    if (f.length) ps = f; else miss.push(label);                         // když takovou variantu nemají, beru běžnou a upozorním
+    if (k === 'lepek' && (P || GF_OK.test(norm(item.q)))) continue;      // ovoce, mléko, maso… lepek přirozeně nemají
+    let f = ps.filter(p => re.test(norm(p.nazev)));
+    if (!f.length && w0){ f = pool.filter(p => re.test(norm(p.nazev))); if (f.length) rank = true; }
+    if (f.length){ ps = f; pool = f; } else miss.push(label);           // když takovou variantu nemají, beru běžnou a upozorním
   }
   const brands = prefWords(PF.brands);
   if (brands.length){ const f = ps.filter(p => has(p, brands)); if (f.length) ps = f; }
   // Obecné zboží (ne pečivo s výchozím druhem, ne ovoce): vyberu jen nejpravděpodobnější produkty
   item._top = null;
-  if (!dh.length && !ph.length && ps.length){
+  if (rank && ps.length){
     const ranked = ps.map(p => ({p, s: likely(p, ws, item)})).sort((a, b) => b.s - a.s);
     ps = ranked.filter(x => x.s >= ranked[0].s - 0.6).slice(0, 5).map(x => x.p);
     item._top = ps;
@@ -624,6 +631,17 @@ function likely(p, ws, item){
   return -extra + exact + (typ && typ.test(plain(p.nazev)) ? 3 : 0) + (starts ? 0.5 : 0) + 0.4 * Math.min(shops, 3) + (p.nabidky.some(usable) ? 0.5 : 0) + (fits ? 1 : -3) - (PROC.test(plain(p.nazev)) ? 5 : 0);
 }
 // Profil: poznám to jen podle názvu produktu, složení Kupi.cz neuvádí
+// Co se při zapnuté dietě dohledává navíc: „chleba“ -> „chléb bez lepku“
+// Základní potraviny, které jsou bez lepku samy od sebe (nehledám u nich bezlepkovou variantu ani nevaruji)
+const GF_OK = /^(mlek|mlik|vejc|vajic|maslo|ryz|cukr|sul|olej|brambor|smetan|tvaroh|maso|kure|krut|vepr|hovez|mlet|ryb|losos|tunak|kava|caj|voda|mineral|dzus|vino|med|syr)/;
+const DIET_Q = {bio: 'bio', lepek: 'bez lepku', laktoza: 'bez laktózy', vegan: 'vegan'};
+const dietKey = () => DIETS.filter(([k]) => state.prefs[k]).map(([k]) => k).join(',');
+function dietQueries(item){
+  if (item.cur) return [];                                   // ručně vybraný produkt neměním
+  const base = item.dk ? item.q.split(/\s+/)[0] : item.q;    // u výchozího druhu (chléb Šumava) hledám obecně „chléb“
+  const gfOk = produceOf(item) || GF_OK.test(norm(item.q));
+  return DIETS.filter(([k]) => state.prefs[k] && !(k === 'lepek' && gfOk)).map(([k]) => base + ' ' + DIET_Q[k]);
+}
 const DIETS = [
   ['bio', 'bio', /\bbio\b/],
   ['lepek', 'bez lepku', /bez lepku|bezlepk|gluten ?free/],
@@ -1113,13 +1131,22 @@ async function load(item, fresh){
         }
       } catch (e) {}
     }
+    // zapnutá dieta (bez lepku, bio…): dohledám i takové varianty, v běžném hledání často nejsou
+    const known0 = new Set(d.produkty.map(p => p.url));
+    for (const dq of dietQueries(item)) try {
+      const parts = await Promise.all([
+        fetch('/api/hledej?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(r => r.json()).catch(() => ({})),
+        fetch('/api/eshopy?q=' + encodeURIComponent(dq) + (fresh ? '&fresh=1' : '')).then(r => r.json()).catch(() => ({}))]);
+      for (const x of parts) for (const p of x.produkty || []) if (!known0.has(p.url)){ known0.add(p.url); d.produkty.push(p); }
+    } catch (e) {}
+    item._dietLoaded = dietKey();
     // běžné ceny z e-shopů (Rohlík, Košík, Tesco, Globus, Lidl)
     item.eshopErr = null;
     try {
       const e = await (await fetch('/api/eshopy?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''))).json();
       if (e.chyba) throw new Error(e.chyba);
       const known = new Set(d.produkty.map(p => p.url));
-      for (const p of e.produkty || []) if (!known.has(p.url)) d.produkty.push(p);
+      for (const p of e.produkty || []) if (!known.has(p.url)){ known.add(p.url); d.produkty.push(p); }
       if (e.chyby && Object.keys(e.chyby).length) item.eshopErr = e.chyby;
     } catch (e) { item.eshopErr = {vse: errText(e)}; }
     item.data = d; computeDefault(item);
@@ -1149,14 +1176,26 @@ function openSettings(){ $('set').open = true; $('set').scrollIntoView({block: '
 const errText = e => e instanceof TypeError ? 'Nejde se spojit s programem app.py. Běží ještě?' : (e.message || 'Něco se nepovedlo.');
 
 // Zeptá se prohlížeče na polohu (prohlížeč si vyžádá tvoje povolení)
+// Nejdřív rychle a úsporně (Wi-Fi, mobilní síť, poloha z posledních minut), když to nevyjde, zkusí GPS.
 function locate(){
   state.locAsked = true; save();
+  if (!window.isSecureContext && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+    setLocMsg('Na téhle adrese (http) telefon polohu nepovolí. Napiš adresu, nebo otevři Papírek přes https.'); openSettings(); return;
+  }
   if (!navigator.geolocation){ setLocMsg('Tenhle prohlížeč polohu zjistit neumí. Napiš adresu.'); openSettings(); return; }
+  const ok = pos => setLoc(pos.coords.latitude, pos.coords.longitude, 'podle tvého zařízení');
+  const fail = err => {
+    setLocMsg(err.code === 1
+      ? 'Polohu jsi nepovolil. Povol ji v nastavení prohlížeče u stránky Papírku, nebo napiš adresu.'
+      : 'Polohu se nepodařilo zjistit (zkus zapnout polohové služby v telefonu). Můžeš napsat adresu.');
+    openSettings();
+  };
   setLocMsg('Zjišťuji polohu…');
-  navigator.geolocation.getCurrentPosition(
-    pos => setLoc(pos.coords.latitude, pos.coords.longitude, 'podle tvého zařízení'),
-    err => { setLocMsg(err.code === 1 ? 'Polohu jsi nepovolil. Místo toho můžeš napsat adresu.' : 'Polohu se nepodařilo zjistit. Napiš adresu.'); openSettings(); },
-    {timeout: 15000, maximumAge: 600000});
+  navigator.geolocation.getCurrentPosition(ok, err => {
+    if (err.code === 1) return fail(err);
+    setLocMsg('Zjišťuji polohu přes GPS, chvilku to může trvat…');
+    navigator.geolocation.getCurrentPosition(ok, fail, {enableHighAccuracy: true, timeout: 25000, maximumAge: 0});
+  }, {enableHighAccuracy: false, timeout: 8000, maximumAge: 900000});
 }
 async function locateByAddress(){
   const a = $('addr').value.trim(); if (!a) return;
@@ -1172,9 +1211,16 @@ async function setLoc(lat, lon, nazev){
   await fetchShops();
 }
 // Zeptá se serveru na nejbližší pobočku každého obchodu a doplní vzdálenosti
+let shopsBusy = false, shopsAgain = false;
 async function fetchShops(){
   if (!state.loc) return;
-  setLocMsg('Hledám obchody v okolí…');
+  if (shopsBusy){ shopsAgain = true; return; }      // už se hledá, po dokončení se zeptám ještě jednou
+  shopsBusy = true;
+  try { await fetchShopsNow(); } finally { shopsBusy = false; }
+  if (shopsAgain){ shopsAgain = false; fetchShops(); }
+}
+async function fetchShopsNow(){
+  setLocMsg('Hledám obchody v okolí (mapa OpenStreetMap, poprvé to může trvat i půl minuty)…');
   try {
     const d = await (await fetch(`/api/obchody?lat=${state.loc.lat}&lon=${state.loc.lon}&slugy=` + encodeURIComponent(Object.keys(state.shops).filter(s => !ONLINE.has(s)).join(',')))).json();
     if (d.chyba) throw new Error(d.chyba);
@@ -1289,6 +1335,8 @@ $('set').addEventListener('change', e => {
   else if (t.dataset.pref || t.id === 'pBrands' || t.id === 'pAvoid'){
     if (t.dataset.pref) state.prefs[t.dataset.pref] = t.checked; else state.prefs[t.id === 'pBrands' ? 'brands' : 'avoid'] = t.value;
     for (const it of state.items) computeDefault(it);
+    // nově zapnutá dieta: u položek v košíku dohledám bezlepkové (bio…) varianty a přepočítám
+    if (t.dataset.pref){ save(); (async () => { for (const it of state.items.slice()) if (state.items.includes(it) && !it.cur && it._dietLoaded !== dietKey()) await load(it); })(); }
   }
   else if (t.id === 'optToday') state.today = t.checked;
   render();

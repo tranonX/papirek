@@ -39,10 +39,11 @@ PAUZA = 1.0            # pauza mezi dotazy na Kupi.cz v sekundách
 UA = "Papirek/1.0 (osobni nakupni seznam)"
 OKOLI_KM = 10          # do jaké vzdálenosti hledat pobočky obchodů
 OVERPASS = ["https://overpass-api.de/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter"]   # mapová data OpenStreetMap
 NOMINATIM = "https://nominatim.openstreetmap.org/search"       # převod adresy na souřadnice
 
-VERZE = "2026-11-18a"
+VERZE = "2026-11-18c"
 SLOZKA = os.path.dirname(os.path.abspath(__file__))
 CACHE_SOUBOR = os.path.join(SLOZKA, "cache.json")
 LADENI_SOUBOR = os.path.join(SLOZKA, "posledni_stranka.html")
@@ -931,59 +932,79 @@ def vzdalenost_km(lat1, lon1, lat2, lon2):
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
-def najdi_obchody(lat, lon, slugy):
-    """Pro každý řetězec najde nejbližší pobočku v OpenStreetMap (vzdušnou čarou)."""
-    slova = {}
-    for s in slugy:
-        k = re.sub(r"[^a-z0-9-]", "", s.lower()).split("-")[0]   # 'penny-market' -> 'penny'
-        if k:
-            slova[s] = k
-    if not slova:
-        return {}
-    vzor = "|".join(sorted({_vzor(k) for k in slova.values()}))
-    okoli = "(around:%d,%.5f,%.5f)" % (OKOLI_KM * 1000, lat, lon)
-    dotaz = ('[out:json][timeout:30];('
+# Řetězce, které se na mapě hledají vždycky (jeden dotaz na okolí pak poslouží pro celý nákup)
+ZAKLADNI_RETEZCE = ["albert", "billa", "lidl", "kaufland", "penny", "tesco", "globus", "coop", "jip",
+                    "hruska", "cba", "flop", "makro", "ratio", "norma", "teta", "rossmann", "terno", "tamda"]
+
+
+def _slovo_retezce(slug):
+    return re.sub(r"[^a-z0-9-]", "", slug.lower()).split("-")[0]   # 'penny-market' -> 'penny'
+
+
+def _prvky_z_mapy(lat, lon, slova):
+    """Stáhne z OpenStreetMap pobočky zadaných řetězců v okolí a vrátí je ve stručné podobě."""
+    vzor = "|".join(sorted({_vzor(k) for k in slova}))
+    okoli = "(around:%d,%.5f,%.5f)" % ((OKOLI_KM + 1) * 1000, lat, lon)
+    dotaz = ('[out:json][timeout:25];('
              'nwr["shop"]["brand"~"%s",i]%s;'
-             'nwr["shop"~"supermarket|convenience|wholesale|chemist|department_store|general|variety_store"]["name"~"%s",i]%s;'
+             'nwr["shop"~"supermarket|convenience|wholesale|chemist|department_store|general|variety_store|beverages"]["name"~"%s",i]%s;'
              ');out center tags;') % (vzor, okoli, vzor, okoli)
     telo = urllib.parse.urlencode({"data": dotaz}).encode("utf-8")
     chyba = None
     for server in OVERPASS:
         try:
-            data = json.loads(stahni(server, data=telo, limit=45))
+            data = json.loads(stahni(server, data=telo, limit=30))
             break
         except Exception as e:   # zkusíme záložní server
             chyba = e
     else:
         raise chyba
-    nej = {}
+    prvky = []
     for el in data.get("elements", []):
         tags = el.get("tags") or {}
         stred = el.get("center") or el
         if "lat" not in stred or "lon" not in stred:
             continue
-        nazev = tags.get("name") or tags.get("brand") or ""
         slova_v = set(re.findall(r"[a-z0-9]+", bez_diakritiky(" ".join(
             x for x in (tags.get("brand"), tags.get("name"), tags.get("operator")) if x))))
-        km = vzdalenost_km(lat, lon, stred["lat"], stred["lon"])
+        w = sorted(slova_v & set(slova))
+        if not w:
+            continue
         ulice = tags.get("addr:street") or tags.get("addr:place") or ""
         cislo_domu = tags.get("addr:housenumber") or ""
         adresa = ", ".join(x for x in ((ulice + " " + cislo_domu).strip(), tags.get("addr:city")) if x)
-        for slug, k in slova.items():
-            if k in slova_v and (slug not in nej or km < nej[slug]["km"]):
-                nej[slug] = {"km": round(km, 2), "nazev": nazev, "adresa": adresa or None,
-                             "lat": stred["lat"], "lon": stred["lon"]}
-    return nej
+        prvky.append({"lat": stred["lat"], "lon": stred["lon"], "w": w,
+                      "nazev": tags.get("name") or tags.get("brand") or "", "adresa": adresa or None})
+    return prvky
+
+
+_mapa_zamek = threading.Lock()
 
 
 def obchody_s_pameti(lat, lon, slugy):
-    slugy = sorted(set(slugy))[:60]
+    """Nejbližší pobočka každého řetězce (vzdušnou čarou). Mapu okolí si pamatuje po čtvercích asi 1 km,
+    takže další položky v seznamu ani malý posun polohy už na mapu znovu nečekají."""
+    slova = {s: _slovo_retezce(s) for s in sorted(set(slugy))[:60]}
+    slova = {s: k for s, k in slova.items() if k}
     lat, lon = round(lat, 3), round(lon, 3)   # přesnost asi 100 m, víc mapě neposíláme
-    klic = "@obchody:%.3f,%.3f:%s" % (lat, lon, ",".join(slugy))
-    z = pamet_cti(klic, 24 * 7)
-    if not z or "obchody" not in z:
-        z = pamet_zapis(klic, {"obchody": najdi_obchody(lat, lon, slugy)})
-    return {"obchody": z["obchody"], "polomer_km": OKOLI_KM}
+    g_lat, g_lon = round(lat, 2), round(lon, 2)
+    klic = "@mapa:%.2f,%.2f" % (g_lat, g_lon)
+    with _mapa_zamek:                           # stejné okolí se nestahuje dvakrát naráz
+        z = pamet_cti(klic, 24 * 7)
+        chybi = set(slova.values()) - set(z["slova"]) if z and "slova" in z else None
+        if z is None or "slova" not in z or chybi:
+            hledat = sorted(set(ZAKLADNI_RETEZCE) | set(slova.values()) | (set(z["slova"]) if z and "slova" in z else set()))
+            z = pamet_zapis(klic, {"slova": hledat, "prvky": _prvky_z_mapy(g_lat, g_lon, hledat)})
+    nej = {}
+    for pr in z["prvky"]:
+        km = vzdalenost_km(lat, lon, pr["lat"], pr["lon"])
+        if km > OKOLI_KM:
+            continue
+        for slug, k in slova.items():
+            if k in pr["w"] and (slug not in nej or km < nej[slug]["km"]):
+                nej[slug] = {"km": round(km, 2), "nazev": pr["nazev"], "adresa": pr["adresa"],
+                             "lat": pr["lat"], "lon": pr["lon"]}
+    return {"obchody": nej, "polomer_km": OKOLI_KM}
 
 
 def najdi_adresu(adresa):
@@ -1191,8 +1212,14 @@ class Obsluha(BaseHTTPRequestHandler):
         else:
             self._posli(404, "text/plain; charset=utf-8", b"Nenalezeno")
 
+    def do_HEAD(self):                      # hosting si občas jen „ťukne“, jestli server žije
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def log_message(self, fmt, *args):
-        if "/api/" in (args[0] if args else ""):
+        if args and "/api/" in str(args[0]):
             sys.stderr.write("  %s\n" % urllib.parse.unquote(str(args[0])))
 
 
