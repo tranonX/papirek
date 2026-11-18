@@ -1,0 +1,1 @@
+# Papírek potřebuje jen Python, žádné další balíčky.

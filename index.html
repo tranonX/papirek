@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Papírek</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/ikona-180.png">
+<meta name="theme-color" content="#FFD23F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Papírek">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23FFD23F'/%3E%3Cg transform='rotate(-4 20 20)'%3E%3Cpath d='M10 6h15l6 6v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z' fill='%23FFFDF4' stroke='%231D1A1A' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M25 6v6h6' fill='none' stroke='%231D1A1A' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cg stroke='%231D1A1A' stroke-width='2.4' stroke-linecap='round' fill='none'%3E%3Cpath d='M12.5 17.5l1.6 1.6 2.8-3.2M19.5 17.5h7.5M12.5 24l1.6 1.6 2.8-3.2M19.5 24h7.5M13 30.5h1.5M19.5 30.5h5'/%3E%3C/g%3E%3C/g%3E%3Crect x='13' y='2.5' width='11' height='5' rx='1' fill='%23E8413C' stroke='%231D1A1A' stroke-width='2' transform='rotate(-10 18.5 5)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --sky:#9ADCF7; --paper:#FFFDF4; --ink:#1D1A1A; --muted:#5B5552; --line:#D9D3C4;
+  --yellow:#FFD23F; --red:#E8413C; --on-red:#FFFFFF; --green:#3DB54A; --surface:#FFFFFF;
+  --display:"Baloo 2","Trebuchet MS","Segoe UI",sans-serif;
+  --body:"Nunito","Trebuchet MS","Segoe UI",sans-serif;
+  --o:3px solid var(--ink);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--sky);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 56px}
+header h1{font-family:var(--display);font-weight:800;font-size:3.6rem;line-height:.95;margin:0;display:inline-block;background:var(--yellow);border:var(--o);border-radius:18px;padding:6px 22px 2px;box-shadow:5px 5px 0 var(--ink);transform:rotate(-2deg)}
+header p{margin:16px 0 0;max-width:60ch;font-weight:600}
+.status{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:.92rem}
+.link{padding:0;border:0;background:none;text-decoration:underline;font-weight:700}
+.alert{margin:16px 0 0;padding:10px 14px;border:var(--o);border-radius:12px;background:var(--red);color:var(--on-red)}
+
+.cols{display:grid;gap:28px;margin-top:26px}
+@media (min-width:920px){.cols{grid-template-columns:400px 1fr;gap:34px;align-items:start}}
+.cols>section{position:relative;background:var(--paper);border:var(--o);border-radius:18px;padding:22px 18px 20px;box-shadow:6px 6px 0 var(--ink);min-width:0}
+.cols>section:first-child::before{content:"";position:absolute;top:-14px;left:50%;width:110px;height:26px;margin-left:-55px;background:var(--yellow);border:var(--o);border-radius:4px;transform:rotate(-3deg)}
+h2{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1.05;margin:0 0 12px}
+
+.add{display:flex;gap:8px}
+.add input{flex:1;min-width:0;padding:11px 16px;border:var(--o);border-radius:999px;background:var(--surface)}
+.add input::placeholder{color:var(--muted)}
+.btn{padding:11px 20px;border:var(--o);border-radius:999px;background:var(--red);color:var(--on-red);font-family:var(--display);font-weight:800;font-size:1.1rem;line-height:1.2;box-shadow:3px 3px 0 var(--ink)}
+.btn:active{transform:translate(3px,3px);box-shadow:none}
+.hint{margin:10px 0 0;font-size:.88rem;color:var(--muted)}
+
+.list{list-style:none;margin:12px 0 0;padding:0}
+.list>li{padding:10px 0;border-bottom:2px dashed var(--line)}
+.row{display:flex;align-items:center;gap:8px}
+.nm{flex:1;min-width:0}
+.nm b{font-weight:800;font-size:1.05rem;display:block;overflow-wrap:anywhere}
+.nm small{color:var(--muted);display:block}
+.nm small.err{color:var(--red);font-weight:700}
+.step{display:flex;align-items:center;border:var(--o);border-radius:999px;background:var(--surface);overflow:hidden}
+.step button{width:34px;height:34px;border:0;background:none;font-size:1.2rem;font-weight:800;line-height:1}
+.step button:hover{background:var(--yellow)}
+.step span{min-width:22px;text-align:center;font-weight:800}
+.rm{width:36px;height:36px;border:0;background:none;color:var(--muted);font-size:1.4rem;font-weight:800;line-height:1}
+.rm:hover{color:var(--red)}
+.empty{color:var(--muted);padding:16px 0}
+
+.pick{margin-top:10px;padding:10px 12px;background:var(--surface);border:var(--o);border-radius:12px}
+.pick-h{display:flex;gap:14px;align-items:center;font-size:.9rem;margin-bottom:6px}
+.pick-h span{flex:1;color:var(--muted)}
+.pick ul{list-style:none;margin:0;padding:0;max-height:320px;overflow:auto}
+.pick label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer;border-top:2px dashed var(--line)}
+.pick input,.rows input,.set input[type=checkbox]{width:22px;height:22px;accent-color:var(--red);flex:none;margin-top:1px}
+.pick .t{flex:1;min-width:0;font-size:.95rem;font-weight:600}
+.pick .t small{color:var(--muted);display:block;font-weight:400}
+.pick .pp{white-space:nowrap;font-weight:800;font-size:.95rem}
+.pick li.off .t,.pick li.off .pp{opacity:.5}
+
+details.set{margin-top:22px;border-top:var(--o);padding-top:12px}
+details.set summary{font-family:var(--display);font-weight:800;font-size:1.35rem;cursor:pointer}
+.set p{margin:8px 0;font-size:.9rem;color:var(--muted)}
+.shop-row{display:flex;align-items:center;gap:10px;padding:5px 0}
+.shop-row label{flex:1;display:flex;gap:10px;align-items:center;cursor:pointer;font-weight:600}
+.shop-row input[type=number]{width:78px;padding:5px 10px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);text-align:right}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+
+.tags{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tag{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:10px 10px 12px;border:var(--o);border-radius:16px;background:var(--surface);text-align:left;min-width:0}
+.tag[aria-pressed="true"]{background:var(--yellow);box-shadow:5px 5px 0 var(--ink);transform:rotate(-1.5deg)}
+.tag:disabled{opacity:.6;cursor:default;border-style:dashed}
+.tag .lbl{font-family:var(--display);font-weight:800;font-size:1.05rem;line-height:1.1}
+.tag .sub{font-size:.82rem;overflow-wrap:anywhere}
+.tag .diff{font-size:.82rem;font-weight:800}
+.p{font-family:var(--display);font-weight:800;display:inline-flex;align-items:flex-start;line-height:1;white-space:nowrap}
+.p .d{font-size:.5em;margin-left:.08em;padding-top:.1em}
+.p .kc{font-family:var(--body);font-weight:700;font-size:.34em;align-self:flex-end;margin-left:.3em;padding-bottom:.45em}
+.tag .p{font-size:2.2rem;margin:4px 0 0}
+@media (min-width:520px){.tag{padding:14px 14px 16px}.tag .p{font-size:3rem}}
+
+.limit{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:20px 0 0;font-size:.92rem}
+.seg{display:inline-flex;border:var(--o);border-radius:999px;overflow:hidden}
+.seg button{width:38px;height:32px;border:0;background:var(--surface);font-weight:800}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+.sum{margin:20px 0 0;max-width:62ch;font-weight:600}
+.shop{margin-top:22px}
+.shop-h{display:flex;align-items:baseline;gap:10px;border-bottom:var(--o);padding-bottom:4px}
+.shop-h h3{font-family:var(--display);font-weight:800;font-size:1.6rem;line-height:1;margin:0}
+.shop-h .km{color:var(--muted);font-size:.9rem;flex:1}
+.shop-h .p{font-size:1.6rem}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{border-bottom:2px dashed var(--line)}
+.rows label{display:flex;align-items:flex-start;gap:10px;padding:10px 0;cursor:pointer}
+.rows .t{flex:1;min-width:0;font-weight:600}
+.rows .t small{color:var(--muted);display:block;font-weight:400}
+.rows .pr{text-align:right;white-space:nowrap}
+.rows .pr b{font-weight:800}
+.rows .pr small{display:block;color:var(--muted)}
+.badge{display:inline-block;font-size:.74rem;font-weight:800;padding:0 7px;border-radius:999px;margin-left:6px;vertical-align:2px;background:var(--red);color:var(--on-red);border:2px solid var(--ink)}
+.badge.k{background:var(--surface);color:var(--ink)}
+.rows li.done .t,.rows li.done .pr{text-decoration:line-through;opacity:.5}
+.rows li.jinak{background:#FFF1B8;margin:0 -8px;padding:0 8px;border-radius:8px}
+.rows .diff{display:block;font-style:normal;font-weight:800;font-size:.85rem;color:#8A5A00}
+.alerts{margin-top:16px;display:grid;gap:8px}
+.alerts p{margin:0;padding:10px 14px;border:var(--o);border-radius:12px;font-weight:600;font-size:.95rem}
+.alerts .chybi{background:#FFD9D6}
+.alerts .jine{background:#FFF1B8}
+.note{margin-top:18px;padding:10px 14px;background:var(--surface);border:2px dashed var(--ink);border-radius:12px;font-size:.92rem}
+.foot{margin-top:34px;font-size:.88rem;max-width:72ch}
+@media (prefers-reduced-motion:reduce){.btn:active{transform:none}}
+.size{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:.9rem}
+.size label{font-weight:700}
+.size input{width:104px;padding:4px 12px;border:2px solid var(--ink);border-radius:999px;background:var(--surface)}
+.size small{flex-basis:100%;color:var(--muted)}
+.size small.err{color:var(--red);font-weight:700}
+.chip{padding:2px 10px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);font-weight:700;font-size:.85rem}
+.chip[aria-pressed="true"]{background:var(--yellow)}
+.loc{margin:10px 0 14px;padding:12px;border:var(--o);border-radius:12px;background:var(--surface)}
+.loc p{margin:0 0 10px;color:var(--ink);font-weight:600}
+.loc .add{margin-top:10px}
+.btn.alt{background:var(--surface);color:var(--ink)}
+.shop-row small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.tag[data-geo]{border-style:dashed}
+.links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.own{margin-top:10px;padding:10px 12px;background:var(--surface);border:var(--o);border-radius:12px}
+.own p{margin:0 0 6px;font-size:.9rem;color:var(--muted)}
+.own .shop-row input[type=number]{width:96px}
+.badge.m{background:var(--yellow);color:var(--ink)}
+.badge.g{background:var(--green);color:#fff}
+.badge.w{background:var(--surface);color:var(--red);border-style:dashed;border-color:var(--red)}
+.card{display:flex;align-items:center;gap:5px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.set h3{font-family:var(--display);font-weight:800;font-size:1.15rem;margin:18px 0 4px}
+.set input[type=text]{width:100%;padding:6px 12px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);margin-top:4px}
+.set .fld{display:block;margin-top:8px;font-size:.9rem;font-weight:700}
+.lists{margin-top:16px}
+.lists h3{font-family:var(--display);font-weight:800;font-size:1.15rem;margin:0 0 6px}
+.lists .add input{padding:6px 14px;border-width:2px}
+.lists .btn{padding:6px 14px;font-size:.95rem;box-shadow:2px 2px 0 var(--ink)}
+.lists .shop-row span{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.lists .shop-row small{display:inline;margin-left:6px}
+.fab{position:fixed;right:18px;bottom:18px;z-index:20;width:60px;height:60px;border:var(--o);border-radius:50%;background:var(--yellow);box-shadow:4px 4px 0 var(--ink);display:grid;place-items:center;padding:0}
+.fab svg{width:40px;height:40px}
+.fab:active{transform:translate(3px,3px);box-shadow:none}
+.fab[hidden]{display:none}
+#res{scroll-margin-top:12px}
+@media (max-width:560px){
+  .tags{grid-template-columns:1fr;gap:8px}
+  .tag{flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:10px;padding:10px 14px;transform:none}
+  .tag[aria-pressed="true"]{transform:none}
+  .tag .lbl{min-width:96px}
+  .tag .p{font-size:2rem;margin:0}
+  .tag .sub,.tag .diff{flex-basis:auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Papírek</h1>
+    <p>Napiš, co potřebuješ koupit. Najdu to v aktuálních letácích a spočítám, kde nakoupit.</p>
+    <div class="status"><span id="status"></span><button class="link" id="refresh" type="button" hidden>Načíst ceny znovu</button></div>
+    <div class="status"><span id="locTxt"></span><button class="link" id="locBtn" type="button">Nastavit polohu</button></div>
+    <p class="alert" id="fileWarn" hidden>Aplikace musí běžet přes program app.py. Zavři tuhle stránku a spusť soubor „spustit“ ve složce aplikace.</p>
+  </header>
+
+  <div class="cols">
+    <section aria-labelledby="h-list">
+      <h2 id="h-list">Nákupní seznam</h2>
+      <div class="add">
+        <input id="q" type="text" autocomplete="off" maxlength="60" placeholder="Třeba 3 rohlíky, půlka chleba…" aria-label="Název zboží">
+        <button class="btn" id="addBtn" type="button">Přidat</button>
+      </div>
+      <div class="size" id="fav"></div>
+      <ul class="list" id="list"></ul>
+      <div class="lists">
+        <h3>Uložené seznamy</h3>
+        <div id="lists"></div>
+        <div class="add">
+          <input id="listName" type="text" maxlength="40" placeholder="Název, třeba Týdenní nákup" aria-label="Název seznamu">
+          <button class="btn alt" id="listSave" type="button">Uložit seznam</button>
+        </div>
+      </div>
+
+      <details class="set" id="set">
+        <summary>Moje obchody a nastavení</summary>
+        <div class="loc">
+          <p id="locInfo"></p>
+          <button class="btn" id="geoBtn" type="button">Zjistit moji polohu</button>
+          <div class="add">
+            <input id="addr" type="text" autocomplete="street-address" maxlength="120" placeholder="nebo adresa, třeba Kolín, Pražská 5" aria-label="Adresa">
+            <button class="btn alt" id="addrBtn" type="button">Najít</button>
+          </div>
+        </div>
+        <div id="setBody"></div>
+      </details>
+    </section>
+
+    <section aria-labelledby="h-res">
+      <h2 id="h-res">Kde nakoupit</h2>
+      <div id="res"></div>
+    </section>
+  </div>
+
+  <button class="fab" id="goList" type="button" aria-label="Přejít na seznam, co kde koupit" title="Co kde koupit" hidden>
+  <svg viewBox="0 0 40 40" aria-hidden="true">
+    <path d="M10 6h15l6 6v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#FFFDF4" stroke="#1D1A1A" stroke-width="2.5" stroke-linejoin="round" transform="rotate(-4 20 20)"/>
+    <path d="M25 6v6h6" fill="none" stroke="#1D1A1A" stroke-width="2.5" stroke-linejoin="round" transform="rotate(-4 20 20)"/>
+    <g transform="rotate(-4 20 20)" stroke="#1D1A1A" stroke-width="2.4" stroke-linecap="round" fill="none">
+      <path d="M12.5 17.5l1.6 1.6 2.8-3.2"/><path d="M19.5 17.5h7.5"/>
+      <path d="M12.5 24l1.6 1.6 2.8-3.2"/><path d="M19.5 24h7.5"/>
+      <path d="M13 30.5h1.5"/><path d="M19.5 30.5h5"/>
+    </g>
+    <rect x="13" y="2.5" width="11" height="5" rx="1" fill="#E8413C" stroke="#1D1A1A" stroke-width="2" transform="rotate(-10 18.5 5)"/>
+  </svg>
+</button>
+<p class="foot">Akce pocházejí z letáků na Kupi.cz pro oblast, kterou Kupi.cz určí podle tvého připojení. Běžné ceny beru z e-shopů Rohlík.cz, Košík.cz, Tesco, Globus a z webu Lidl. U Tesca a Globusu jde o ceny v jejich e-shopu, v prodejně se můžou lišit. Kaufland, Albert, Billa a Penny běžné ceny na webu nezveřejňují, u nich znám jen akce. Vzdálenosti jsou vzdušnou čarou k nejbližší pobočce podle map OpenStreetMap.</p>
+</div>
+
+<script>
+/* ============================================================
+   STAV
+   ============================================================ */
+const KEY = 'levny-kosik-v2';
+const ZNAME = {albert:'Albert', billa:'Billa', kaufland:'Kaufland', lidl:'Lidl', 'penny-market':'Penny', tesco:'Tesco', globus:'Globus', 'rohlik-cz':'Rohlík.cz', 'kosik-cz':'Košík.cz'};
+// E-shopy s doručením: nemají prodejnu, takže se u nich neřeší vzdálenost
+const ONLINE = new Set(['rohlik-cz', 'kosik-cz']);
+let state = { items: [], shops: {}, max: 2, variant: 'cheap', club: true, today: true, checked: {}, loc: null, locAsked: false, mem: {}, own: {}, lists: {},
+  prefs: {bio: false, lepek: false, laktoza: false, vegan: false, brands: '', avoid: ''} };
+for (const s in ZNAME) state.shops[s] = {on: true, km: null};
+try {
+  const s = JSON.parse(localStorage.getItem(KEY));
+  if (s && Array.isArray(s.items)) {
+    Object.assign(state, s);
+    for (const k in ZNAME) if (!state.shops[k]) state.shops[k] = {on: true, km: null};
+  }
+} catch (e) {}
+const shopNames = Object.assign({}, ZNAME);   // názvy obchodů, postupně doplňované z dat
+let openOwn = null;                           // položka s otevřenými vlastními cenami
+let openPick = null;                          // položka s otevřeným výběrem produktů
+
+function save(){
+  try {
+    const items = state.items.map(i => ({id: i.id, q: i.q, qty: i.qty, sel: i.sel, size: i.size, min: i.min, max: i.max, obal: i.obal, cur: i.cur, dk: i.dk, pk: i.pk, vaha: i.vaha}));
+    localStorage.setItem(KEY, JSON.stringify(Object.assign({}, state, {items})));
+  } catch (e) {}
+}
+
+/* ============================================================
+   POMOCNÉ FUNKCE
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const cents = n => Math.round(n * 100);
+function fmt(n){
+  const [i, d] = n.toFixed(2).split('.');
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0') + ',' + d;
+}
+function priceHTML(n){
+  const [i, d] = fmt(n).split(',');
+  return `<span class="p" aria-label="${fmt(n)} Kč"><span>${i}</span><span class="d">${d}</span><span class="kc">Kč</span></span>`;
+}
+const plural = (n, a, b, c) => n === 1 ? a : (n >= 2 && n <= 4 ? b : c);
+const kmTxt = n => n < 0.1 ? 'do 100 m' : (n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', ',') + ' km';
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+const safeUrl = u => /^https:\/\/(www\.kupi\.cz|www\.rohlik\.cz|www\.kosik\.cz|nakup\.itesco\.cz|globusonline\.cz|www\.lidl\.cz)\//.test(u || '') ? u : null;
+const shopName = s => shopNames[s] || s;
+// Chleba se dřív počítal na váhu (1 kg), teď na kusy: starou uloženou velikost zahodím
+if (!state.v3){
+  for (const it of state.items) if (norm(it.q) === 'chleb' && it.min === 400 && /^(1 kg|500 g)$/.test(it.size || '')){ it.min = it.size === '500 g' ? 300 : 400; if (it.size === '500 g') it.max = 650; it.size = ''; }
+  const m = state.mem && state.mem.chleb; if (m && m.min === 400 && /^(1 kg|500 g)$/.test(m.size || '')) m.size = '';
+  state.v3 = true;
+}
+
+let radius = 10;                              // do kolika km server hledá pobočky
+
+/* ============================================================
+   MNOŽSTVÍ A VELIKOST BALENÍ
+   ============================================================ */
+const UNITS = {g:['g',1], dkg:['g',10], dag:['g',10], kg:['g',1000], ml:['ml',1], cl:['ml',10], dl:['ml',100], l:['ml',1000], ks:['ks',1], kus:['ks',1], kusy:['ks',1], kusu:['ks',1],
+  litr:['ml',1000], litry:['ml',1000], litru:['ml',1000], kilo:['g',1000], kila:['g',1000], deka:['g',10], gramu:['g',1]};
+// "6 x 1,5 l" -> {v: 9000, dim: 'ml'}; všechno převádí na gramy, mililitry nebo kusy
+function parseAmount(t){
+  if (!t) return null;
+  const m = norm(String(t)).match(/^(?:(\d+)\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*([a-z]+)\.?$/);
+  if (!m || !UNITS[m[3]]) return null;
+  const v = (m[1] ? +m[1] : 1) * parseFloat(m[2].replace(',', '.')) * UNITS[m[3]][1];
+  return v > 0 ? {v, dim: UNITS[m[3]][0], each: v / (m[1] ? +m[1] : 1)} : null;
+}
+// Velikost z letáku nebo e-shopu ve stejném tvaru jako všude jinde: „750 ml“ -> „0,75 l“, „6x 0.5 l“ -> „6× 0,5 l“
+function fmtSize(m){
+  const a = parseAmount(m); if (!a) return m;
+  const n = Math.round(a.v / a.each);
+  return n > 1 ? `${n}× ${fmtAmount({v: a.each, dim: a.dim})}` : fmtAmount(a);
+}
+// Nápoje vždy v litrech (0,5 l), váha v gramech, od kila nebo s kg = true v kilech (0,5 kg)
+function fmtAmount(a, kg){
+  if (a.dim === 'ks') return a.v + ' ks';
+  const big = a.dim === 'ml' || kg || a.v >= 1000;
+  const unit = a.dim === 'g' ? (big ? 'kg' : 'g') : 'l';
+  return String(+(big ? a.v / 1000 : a.v).toFixed(3)).replace('.', ',') + ' ' + unit;
+}
+/* ============================================================
+   OVOCE A ZELENINA: NA VÁHU, NEBO NA KUSY
+   ============================================================ */
+// Jak se co v obchodech prodává. re = tvary slova, q = co se hledá, mode = 'kg' na váhu / 'ks' na kusy,
+// g = průměrná váha jednoho kusu (pro „3 jablka“), like = jak se jmenují odpovídající produkty.
+// Sem si můžeš přidat další řádky.
+const PRODUCE = [
+  {re: /^jabl(ko|ka|ek|ku)$/,          q: 'jablka',      mode: 'kg', g: 180,  like: /\bjabl(ko|ka)\b/},
+  {re: /^banan(y|u|ek)?$/,             q: 'banány',      mode: 'kg', g: 180,  like: /\bbanan(y)?\b/},
+  {re: /^hrus(ka|ky|ek|ku)$/,          q: 'hrušky',      mode: 'kg', g: 200,  like: /\bhrusk[ay]\b/},
+  {re: /^pomeranc(e|u)?$/,             q: 'pomeranče',   mode: 'kg', g: 220,  like: /\bpomeranc(e)?\b/},
+  {re: /^mandarin(ka|ky|ek|ku)$/,      q: 'mandarinky',  mode: 'kg', g: 80,   like: /\bmandarink[ay]\b/},
+  {re: /^klementin(ka|ky|ek|ku)$/,     q: 'klementinky', mode: 'kg', g: 80,   like: /\bklementink[ay]\b/},
+  {re: /^citron(y|u)?$/,               q: 'citrony',     mode: 'kg', g: 120,  like: /\bcitron(y)?\b/},
+  {re: /^brambor(a|y|u)?$/,            q: 'brambory',    mode: 'kg', g: 150,  like: /\bbrambor(y)?\b/},
+  {re: /^cibul(e|i|ek)$/,              q: 'cibule',      mode: 'kg', g: 120,  like: /\bcibule\b/},
+  {re: /^rajc(e|ata|at|atka)$/,        q: 'rajčata',     mode: 'kg', g: 100,  like: /\brajc(e|ata)\b/},
+  {re: /^paprik(a|y|u)$/,              q: 'paprika',     mode: 'kg', g: 180,  like: /\bpaprik[ay]\b/},
+  {re: /^mrkev$|^mrkv(e|i)$/,          q: 'mrkev',       mode: 'kg', g: 100,  like: /\bmrkev\b/},
+  {re: /^cuket(a|y|u)$/,               q: 'cuketa',      mode: 'kg', g: 300,  like: /\bcuket[ay]\b/},
+  {re: /^hrozn(o|a|y|u)$/,             q: 'hrozny',      mode: 'kg', g: 500,  like: /\bhrozn(o|y|ove)\b/},
+  {re: /^okur(ka|ky|ek|ku)$/,          q: 'okurka',      mode: 'ks', g: 400,  like: /\bokurk[ay]\b/},
+  {re: /^avokad(o|a)$/,                q: 'avokádo',     mode: 'ks', g: 200,  like: /\bavokad[oa]\b/},
+  {re: /^kiwi$/,                       q: 'kiwi',        mode: 'ks', g: 90,   like: /\bkiwi\b/},
+  {re: /^ananas(y|u)?$/,               q: 'ananas',      mode: 'ks', g: 1500, like: /\bananas\b/},
+  {re: /^mang(o|a)$/,                  q: 'mango',       mode: 'ks', g: 400,  like: /\bmango\b/},
+  {re: /^salat(y|u)?$/,                q: 'salát',       mode: 'ks', g: 300,  like: /\bsalat (ledov|hlavkov|rimsk|dubov|lollo|batavi)/},
+  {re: /^kvetak(y|u)?$/,               q: 'květák',      mode: 'ks', g: 800,  like: /\bkvetak\b/},
+  {re: /^brokolic(e|i)$/,              q: 'brokolice',   mode: 'ks', g: 400,  like: /\bbrokolice\b/},
+  {re: /^porek$|^pork(y|u)$/,          q: 'pórek',       mode: 'ks', g: 300,  like: /\bporek\b/},
+  {re: /^kedlub(en|ny|na)$/,           q: 'kedluben',    mode: 'ks', g: 300,  like: /\bkedlub(en|na)\b/},
+  {re: /^cesnek(y|u)?$/,               q: 'česnek',      mode: 'ks', g: 50,   like: /\bcesnek\b/},
+  {re: /^limet(ka|ky|ek)$/,            q: 'limetky',     mode: 'ks', g: 70,   like: /\blimetk[ay]\b/},
+  {re: /^grep(y|u)?$/,                 q: 'grep',        mode: 'ks', g: 400,  like: /\bgrep\b/}
+];
+// Výrobky z ovoce a zeleniny, které při hledání „jablka“ nechci (džus, chipsy, přesnídávka…)
+const PROC = /dzus|nektar|susen|chips|lupin|presnidav|kapsick|zele\b|jogurt|smoothie|marmelad|dzem|kompot|pyre|sirup|\bcaj|bonbon|cokolad|krem|\bvino\b|ocet|kase|mrazen|sterilov|naklada|protlak|pasirovan|kecup|omack|musli|tycink|piskot|dort|kolac|strud|zavin|limonad|napoj|cerealie|tvaroh|zmrzlin|salat s |pomazank|hranolk|krokety|knedl|placky|chutney|pesto|pasta\b|v nalevu|kandovan|fritovan|lis|tableta|vitamin|ochucen/;
+const produceOf = item => item.pk ? PRODUCE.find(x => x.q === item.pk) || null : null;
+// Kolik toho chci na váhu (v gramech) u ovoce a zeleniny prodávané na váhu
+const wantG = item => item.qty * (item.vaha || 1000);
+// "2× Rohlík" nebo "1,5 kg Jablka"
+const qtyTxt = (n, perKg) => perKg ? fmtAmount({v: Math.round(n * 1000), dim: 'g'}, true) : n + '×';
+// Hodí se nabídka k tomu, jak zboží chci? E-shopy u volného ovoce dávají cenu za kus i za kilo.
+function volneFits(item, o){
+  const P = produceOf(item), byKg = P && P.mode === 'kg';
+  if (o.volne === 'ks' && byKg) return false;
+  if (o.volne === 'kg' && !byKg) return false;
+  return true;
+}
+// Kolik balení dané velikosti je potřeba koupit. null = balení se nehodí (moc malé nebo jiný druh zboží).
+function packs(item, mnozstvi){
+  const P = produceOf(item), a = parseAmount(mnozstvi);
+  if (P && P.mode === 'kg'){
+    // na váhu: cena za kilo se násobí váhou, balení (síťka 2 kg) se počítají celá
+    const want = wantG(item);
+    if (!a || a.dim !== 'g') return null;
+    if (a.v === 1000 && a.each === 1000) return {n: Math.round(want / 10) / 100, perKg: true};
+    if (a.v > want * 1.6) return null;                              // pro 1 kg jablek nebudu kupovat 5kg pytel
+    return {n: Math.max(1, Math.ceil(want / a.v - 0.15))};
+  }
+  if (P){
+    // na kusy: cena za kilo se nehodí, tácek se 4 kusy pokryje 4 kusy
+    if (a && a.dim !== 'ks') return null;
+    return {n: Math.max(1, Math.ceil(item.qty / (a ? Math.max(1, a.v) : 1)))};
+  }
+  const want = isPiece(item) ? null : parseAmount(item.size);
+  if (!want){
+    // bez velikosti: 1 ks = 1 balení. U pečiva jen hlídám, aby to nebyl třeba křehký chléb 250 g.
+    if (a && a.dim === 'g' && item.min > 0 && a.each < item.min) return null;
+    if (a && a.dim === 'g' && item.max > 0 && a.each > item.max) return null;
+    const inPack = a ? (a.dim === 'ks' ? Math.max(1, a.v) : Math.max(1, Math.round(a.v / a.each))) : 1;   // "3x 60 g" i "10 ks" je víc kusů v balení
+    return {n: Math.max(1, Math.ceil(item.qty / inPack))};
+  }
+  if (!a || a.dim !== want.dim){
+    if (!a || a.dim === 'ks' || want.dim === 'ks') return {n: item.qty, unknown: true};   // leták velikost neuvádí nebo prodává na kusy
+    return null;                                                                            // chci litry a tohle je v gramech
+  }
+  // Velikost znamená velikost jednoho kusu: chci-li 1 l, beru litrovou lahev, ne dvě půllitrové.
+  // Malá odchylka se odpouští (místo 2 l stačí 1,75 l).
+  if (a.each < want.v * SIZE_LO || a.each > want.v * SIZE_HI) return null;
+  const inPack = Math.max(1, Math.round(a.v / a.each));            // "6x 0.5 l" je balení po šesti
+  return {n: Math.max(1, Math.ceil(item.qty / inPack))};
+}
+const SIZE_LO = 0.8, SIZE_HI = 1.25;
+
+/* ============================================================
+   OBAL: PLECHOVKA, PET, SKLO
+   ============================================================ */
+const OBALY = {plech: 'plechovka', pet: 'PET lahev', sklo: 'sklo'};
+function obalOf(o, p){
+  if (o.obal) return o.obal;
+  const t = norm(p.nazev + ' ' + (o.poznamka || ''));
+  if (/\bplech/.test(t)) return 'plech';
+  if (/\bpet\b/.test(t)) return 'pet';
+  if (/\bsklo\b|\bsklenen|\blahev\b|\blahvov|\bvratn/.test(t)) return 'sklo';
+  return null;
+}
+// true = sedí, false = jiný obal, 'maybe' = leták obal neuvádí
+function obalFit(item, o, p){
+  if (!item.obal) return true;
+  const ob = obalOf(o, p);
+  if (ob) return ob === item.obal;
+  const a = parseAmount(o.mnozstvi);
+  if (item.obal !== 'pet' && a && a.dim === 'ml' && a.each > 1000) return false;   // plechovka ani sklo nad 1 l nebývá
+  return 'maybe';
+}
+
+/* ============================================================
+   ČTENÍ TOHO, CO UŽIVATEL NAPSAL ("půlka chleba", "2 piva plechovka")
+   ============================================================ */
+const NUMS = {jeden:1, jedna:1, jedno:1, jednu:1, dva:2, 'dvě':2, dve:2, 'tři':3, tri:3, 'čtyři':4, ctyri:4, 'pět':5, 'šest':6, sest:6, sedm:7, osm:8, 'devět':9, devet:9, deset:10};
+// Druhy zboží, kterým rozumím. q = jak se to hledá v letácích, size = obvyklá velikost 1 ks, min = nejmenší balení.
+// Sem si můžeš přidat další řádky.
+const KINDS = [
+  {re: /^chleb[auy]?$/,  q: 'chléb',  pc: true, def: 'sumava', piece: {min: 400}, half: {min: 300, max: 650}},   // chleba = 1 ks (bochník)
+  {re: /^piv[oaue]?$/,   q: 'pivo',   size: 500,  dim: 'ml', min: 400, max: 700, always: true},   // pivo = půllitr
+  {re: /^(vejce|vejci|vajec|vajick[oa]|vajicek)$/, q: 'vejce', countIsSize: true},   // "10 vajec" = balení po 10
+  {re: /^rohlik[yu]?$/,  q: 'rohlík',   pc: true, def: 'rohlik'},
+  {re: /^hous(ka|ky|ku|ek)$/, q: 'houska', pc: true, def: 'houska'},
+  {re: /^kaiserk[ayu]$/, q: 'kaiserka', pc: true, def: 'kaiserka'},
+  {re: /^baget[ayu]?$/,  q: 'bageta',   pc: true, def: 'bageta'},
+  {re: /^koblih[ayu]?$/, q: 'kobliha',  pc: true}
+];
+// Co se myslí, když člověk nenapíše druh: "rohlík" je obyčejný rohlík, "chleba" je Šumava.
+// re = které produkty z Kupi.cz tomu odpovídají, slugs = jejich stránky (stáhnou se, i když nejsou v akci),
+// q = co se místo toho hledá. Sem si můžeš přidat další.
+const DEFS = {
+  sumava:   {label: 'chléb Šumava',      q: 'chléb šumava', re: /^(?!.*bez lepku).*(chleb sumava|sumava chleb|sumavsky chleb)/},
+  rohlik:   {label: 'obyčejný rohlík',   re: /^(rohlikuv |penam |globus |tesco |albert |clever )?(tukovy )?rohlik( tukovy| klasik.*| albert| tesco| clever| penam| globus)?$/, slugs: ['rohlik', 'rohlik-klasik', 'rohlik-klasik-albert']},
+  houska:   {label: 'obyčejnou housku',  re: /^(penam |globus |tesco |albert )?(houska|razenka)( - razenka| razenka| albert| tesco| penam| globus)?$/, slugs: ['houska-razenka', 'houska-albert']},
+  kaiserka: {label: 'obyčejnou kaiserku', re: /^(penam |globus |tesco )?kaiserka( penam| tesco| globus)?$/, slugs: ['kaiserka']},
+  bageta:   {label: 'obyčejnou bagetu',  re: /^(penam |globus |tesco )?bageta( francouzska)?( penam| tesco| globus)?$/, slugs: ['bageta']}
+};
+// Pečivo se počítá jen na kusy, velikost se u něj neřeší
+const isPiece = item => norm(item.q).split(/\s+/).some(w => KINDS.some(k => k.pc && k.re.test(w)));
+// Hovorové názvy -> jak se zboží jmenuje v obchodech. Sem si můžeš přidat další.
+const ALIASES = [
+  [/^magnes(ka|ku|ky|ek)$/, 'magnesia'],
+  [/^matton(ka|ku|ky|ek)$/, 'mattoni'],
+  [/^kofol(ka|ku|ky)$/, 'kofola'],
+  [/^(plzen|plzenka|plzni|plznicka|prazdroj)$/, 'pilsner urquell'],
+  [/^gamb(ac|ace|acu|ec)$/, 'gambrinus'],
+  [/^becher(ovk[auy])?$/, 'becherovka'],
+  [/^(koka|kola|kolu|koky|kocka)$/, 'coca cola'],
+  [/^(rajka|rajku|rajky)$/, 'rajec'],
+  [/^(lucink[auy])$/, 'lučina'],
+  [/^(tatar|tataraku)$/, 'tatarák']
+];
+function parseEntry(text){
+  const toks = text.toLowerCase().split(/\s+/).filter(Boolean);
+  let qty = null, size = null, obal = null, frac = 1, fracWord = null, kind = null, whole = false, prod = null;
+  const words = [];
+  for (let i = 0; i < toks.length; i++){
+    const t = toks[i], n = norm(t), nx = toks[i + 1] ? norm(toks[i + 1]) : '';
+    let m;
+    if ((m = n.match(/^(\d+(?:[.,]\d+)?)([a-z]+)$/)) && UNITS[m[2]]){ size = m[1] + ' ' + m[2]; continue; }      // "2l"
+    if (/^\d+(?:[.,]\d+)?$/.test(n) && UNITS[nx]){ size = n + ' ' + nx; i++; continue; }                         // "2 l"
+    if ((m = n.match(/^(\d+)x?$/)) && qty === null){ qty = +m[1]; continue; }                                    // "3", "3x"
+    if (qty === null && (NUMS[t] !== undefined || NUMS[n] !== undefined)){ qty = NUMS[t] !== undefined ? NUMS[t] : NUMS[n]; continue; }
+    if (n === 'pet' && i === 0 && toks.length > 1 && qty === null){ qty = 5; continue; }                         // "pet piv" bez háčku
+    if (/^plech/.test(n)){ obal = 'plech'; continue; }
+    if (/^(pet|petk[ayu]|petek|petce)$/.test(n)){ obal = 'pet'; continue; }
+    if (/^(sklo|skle|sklenen.*|lahev|lahve|lahvi|lahvov.*)$/.test(n)){ obal = obal || 'sklo'; continue; }
+    if (n === 'v' || n === 've') continue;
+    if (/^pul(ka|ku|ky)?$/.test(n)){ frac = 0.5; fracWord = t; continue; }
+    if (/^ctvrt(ka|ku|ky)?$/.test(n)){ frac = 0.25; fracWord = t; continue; }
+    if (frac !== 1 && UNITS[n]){ size = String(frac).replace('.', ',') + ' ' + n; frac = 1; continue; }          // "půl litru"
+    if (/^bochnik[uy]?$/.test(n)){ whole = true; continue; }
+    const al = ALIASES.find(x => x[0].test(n));
+    if (al){ words.push(al[1]); continue; }
+    const pr = PRODUCE.find(x => x.re.test(n));
+    if (pr){ if (!prod) prod = pr; words.push(pr.q); continue; }
+    const k = KINDS.find(k => k.re.test(n));
+    if (k){ if (!kind) kind = k; words.push(k.q); continue; }
+    words.push(t);
+  }
+  if (whole && !kind){ kind = KINDS[0]; words.unshift(kind.q); }
+  if (frac !== 1 && !(kind && (kind.size || kind.half))) words.unshift(fracWord);        // "půlka melounu" nechám, jak je
+  const r = {q: words.join(' '), qty: Math.min(qty || 1, 99), size: size || '', obal};
+  if (kind && kind.countIsSize && qty && !size){ r.size = qty + ' ks'; r.qty = 1; }
+  if (kind && kind.piece && !size){ const lim = frac < 1 ? kind.half : kind.piece; r.min = lim.min; if (lim.max) r.max = lim.max; }
+  // obvyklou velikost doplním jen u holého "chleba"; "toustový chléb" může být jakkoli velký
+  if (kind && kind.size && !size && (kind.always || words.length === 1 || frac !== 1 || whole)){
+    r.auto = frac === 1 && !whole;
+    const v = kind.size * frac;
+    r.size = fmtAmount({v, dim: kind.dim});
+    r.min = frac < 1 ? v * 0.8 : kind.min;
+    if (kind.max) r.max = kind.max;
+  }
+  if (kind && kind.pc) r.size = '';                                   // pečivo jen na kusy
+  if (kind && kind.def && words.length === 1){ r.dk = kind.def; if (DEFS[kind.def].q) r.q = DEFS[kind.def].q; }
+  if (prod && !kind){
+    r.pk = prod.q;
+    if (prod.mode === 'kg'){
+      const a = parseAmount(size);
+      if (a && a.dim === 'g'){ r.vaha = a.v; r.qty = qty || 1; }      // "2 kg brambor", "půl kila jablek"
+      else if (qty){ r.vaha = prod.g; r.qty = qty; }                    // "3 jablka" = 3 kusy po cca 180 g
+      else { r.vaha = 1000; r.qty = 1; }                                 // "jablka" = 1 kg
+    }
+    r.size = '';
+  }
+  return r;
+}
+
+/* ============================================================
+   VÝBĚR PRODUKTŮ A NABÍDEK
+   ============================================================ */
+// Je produkt u položky zaškrtnutý? Když si uživatel nevybral sám, platí odhad podle názvu.
+function isSel(item, p){
+  if (item.sel && item.sel[p.url] !== undefined) return item.sel[p.url];
+  if (item.cur) return false;                 // mám zapamatovaný výběr: nové produkty se samy nepřidávají
+  return item._def ? item._def.has(p.url) : true;
+}
+
+/* ============================================================
+   PAMĚŤ: CO KUPUJU A KOLIK TO STOJÍ MIMO AKCI
+   ============================================================ */
+const memKey = item => norm(item.q);
+// Zapamatuje si pro příště velikost, obal a (když ho uživatel upravil) výběr produktů
+function remember(item, withPick){
+  const m = state.mem[memKey(item)] || (state.mem[memKey(item)] = {});
+  m.q = item.q; m.size = item.size || ''; m.obal = item.obal || null; m.min = item.min; m.max = item.max;
+  if (withPick && item.data){
+    m.urls = {};
+    for (const p of item.data.produkty) if (isSel(item, p)){ m.urls[p.url] = p.nazev; item.sel[p.url] = true; }
+    item.cur = true;
+  }
+}
+function forget(item){
+  const m = state.mem[memKey(item)]; if (m) delete m.urls;
+  item.cur = false; item.sel = {};
+}
+// Vlastní ceny platí pro konkrétní zboží a velikost: půlka chleba stojí jinak než bochník
+function ownKey(item){
+  const P = produceOf(item);
+  if (P) return norm(item.q) + '|' + (P.mode === 'kg' ? 'kg' : 'ks');
+  const a = isPiece(item) ? null : parseAmount(item.size); return norm(item.q) + '|' + (a ? a.dim + a.v : '');
+}
+const ownOf = item => state.own[ownKey(item)] || {};
+const dateCz = iso => { const [y, m, d] = iso.split('-'); return `${+d}. ${+m}.`; };
+function computeDefault(item){
+  const all = item.data ? item.data.produkty : [];
+  // produkt musí obsahovat všechna slova z dotazu (stačí začátek slova, kvůli pádům: banány / banán)
+  const ws = norm(item.q).split(/\s+/).filter(Boolean).map(w => w.slice(0, Math.max(4, w.length - 2)));
+  const hit = all.filter(p => { const n = ' ' + plain(p.nazev); return ws.every(w => n.includes(' ' + w)); });
+  const D = !item.cur && item.dk && DEFS[item.dk];
+  const dh = D ? all.filter(p => D.re.test(bare(p.nazev))) : [];
+  item._dk = dh.length > 0;
+  const P = produceOf(item);
+  const ph = P ? all.filter(p => P.like.test(plain(p.nazev)) && !PROC.test(plain(p.nazev))) : [];
+  // když nic neodpovídá názvu, nevybírám nic (radši než náhodné zboží); uživatel si vybere ve „Změnit“
+  let ps = dh.length ? dh : ph.length ? ph : hit;
+  const PF = state.prefs, miss = [], has = (p, ws) => ws.some(x => norm(p.nazev).includes(x));
+  const avoid = prefWords(PF.avoid);
+  if (avoid.length) ps = ps.filter(p => !has(p, avoid));                 // "nechci" platí vždy
+  for (const [k, label, re] of DIETS) if (PF[k]){
+    const f = ps.filter(p => re.test(norm(p.nazev)));
+    if (f.length) ps = f; else miss.push(label);                         // když takovou variantu nemají, beru běžnou a upozorním
+  }
+  const brands = prefWords(PF.brands);
+  if (brands.length){ const f = ps.filter(p => has(p, brands)); if (f.length) ps = f; }
+  // Obecné zboží (ne pečivo s výchozím druhem, ne ovoce): vyberu jen nejpravděpodobnější produkty
+  item._top = null;
+  if (!dh.length && !ph.length && ps.length){
+    const ranked = ps.map(p => ({p, s: likely(p, ws, item)})).sort((a, b) => b.s - a.s);
+    ps = ranked.filter(x => x.s >= ranked[0].s - 0.6).slice(0, 5).map(x => x.p);
+    item._top = ps;
+  }
+  item._def = new Set(ps.map(p => p.url)); item._miss = miss;
+}
+// Co se u základních potravin myslí, když člověk nenapíše druh: „mléko“ je polotučné, „cukr“ krystal…
+// Klíč je hledané slovo (bez diakritiky), hodnota je jak se ta varianta pozná v názvu. Sem si můžeš přidat další.
+const TYPICAL = {
+  mleko: /polotucn|1[,.]5 ?%/,
+  cukr: /krystal/,
+  mouka: /hladk/,
+  maslo: /^(?!.*(pomazank|bylink|cesnek|ghee|prepust|slan)).*\bmaslo\b/,
+  ryze: /dlouhozrn/,
+  olej: /slunecnic|repkov/,
+  sul: /jodid|jedla/,
+  smetana: /ke slehani/,
+  jogurt: /\bbil[yi]\b/,
+  tvaroh: /mekk|polotucn/,
+  kava: /mlet/,
+  vejce: /\b(m|l)\b/,
+  testoviny: /spaget|penne|vretena|kolinka/,
+  pivo: /^(?!.*(nealko|ochucen|radler|tequil|desperados|citron|grep|limet|visn|jahod|malin)).*(lezak|vycepni|\b1[0-2]\b)/
+};
+// Jak moc produkt odpovídá obecnému dotazu. Vyhrává nejobyčejnější varianta:
+// název bez zbytečných přívlastků, začíná hledaným slovem, prodává se ve víc obchodech a není to výrobek z něj.
+function likely(p, ws, item){
+  const words = bare(p.nazev).split(' ').filter(w => w.length > 2 && !/\d/.test(w));
+  const exact = norm(item.q).split(/\s+/).filter(w => words.includes(w)).length;   // „magnesia“ přesně, ne jen „magnes…“
+  const extra = words.filter(w => !ws.some(s => w.startsWith(s))).length;
+  const shops = new Set(p.nabidky.map(o => o.obchod)).size;
+  const starts = ws.length && words.length && words[0].startsWith(ws[0]);
+  // hodí se velikostí a obalem k tomu, co chci? ("2 piva" nejsou dvoulitrová PET lahev)
+  const fits = p.nabidky.some(o => volneFits(item, o) && packs(item, o.mnozstvi) && obalFit(item, o, p) !== false);
+  const typ = TYPICAL[norm(item.q)];
+  return -extra + exact + (typ && typ.test(plain(p.nazev)) ? 3 : 0) + (starts ? 0.5 : 0) + 0.4 * Math.min(shops, 3) + (p.nabidky.some(usable) ? 0.5 : 0) + (fits ? 1 : -3) - (PROC.test(plain(p.nazev)) ? 5 : 0);
+}
+// Profil: poznám to jen podle názvu produktu, složení Kupi.cz neuvádí
+const DIETS = [
+  ['bio', 'bio', /\bbio\b/],
+  ['lepek', 'bez lepku', /bez lepku|bezlepk|gluten ?free/],
+  ['laktoza', 'bez laktózy', /bez lakto|bezlakto|delakto|lactose ?free/],
+  ['vegan', 'vegan', /vegan|rostlinn/]
+];
+// Název bez diakritiky a interpunkce; „bare“ navíc bez velikosti balení ("Rohlík 43g" -> "rohlik")
+const plain = s => norm(s).replace(/[^a-z0-9 -]+/g, ' ').replace(/\s+/g, ' ').trim();
+const bare = s => plain(norm(s).replace(/\d+([.,]\d+)?\s*(x\s*\d+([.,]\d+)?\s*)?(kg|g|ks|ml|l)\b/g, ' '));
+const prefWords = s => norm(s || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+// Dá se nabídka použít podle nastavení (obchod, věrnostní karty, platnost)?
+// Věrnostní karta se nastavuje u každého obchodu zvlášť
+const hasCard = s => { const sh = state.shops[s]; return sh && sh.card !== undefined ? sh.card : state.club; };
+function usable(o){
+  const sh = state.shops[o.obchod];
+  if (!sh || !sh.on) return false;
+  if (o.klub && !hasCard(o.obchod)) return false;
+  const t = todayISO();
+  if (o.plati_do && o.plati_do < t) return false;
+  if (state.today && o.plati_od && o.plati_od > t) return false;
+  return true;
+}
+// Pro položku: nejlevnější použitelná nabídka v každém obchodě + odhad běžné ceny
+function itemInfo(item){
+  const best = {}, own = {}; let regular = null; let nSel = 0;
+  const mine = ownOf(item);
+  const P = produceOf(item), byKg = P && P.mode === 'kg';
+  for (const s in mine) if (state.shops[s] && state.shops[s].on){
+    const n = byKg ? wantG(item) / 1000 : item.qty;     // u zboží na váhu je vlastní cena za kilo
+    own[s] = {own: true, shop: s, price: mine[s].c, d: mine[s].d, n, perKg: byKg, cost: mine[s].c * n};
+  }
+  if (!item.data) return {best, own, regular, nSel, n: 0};
+  // Odhad ceny mimo akci. Spolehlivé zdroje: běžná cena pro konkrétní velikost a původní cena
+  // dopočítaná ze slevy v letáku. Nouzový zdroj: běžná cena produktu, u kterého neznám velikost.
+  const sure = [], rough = [], t = todayISO();
+  const add = (list, k, c) => { if (k && c > 0) list.push({cost: k.n * c, n: k.n, price: c, perKg: !!k.perKg}); };
+  for (const p of item.data.produkty){
+    if (!isSel(item, p)) continue;
+    nSel++;
+    const fit = m => obalFit(item, {mnozstvi: m}, p) === false ? null : packs(item, m);
+    if (p.bezne_ceny && Object.keys(p.bezne_ceny).length) for (const [m, c] of Object.entries(p.bezne_ceny)) add(sure, fit(m), c);
+    else if (p.bezna_cena){ const k = fit(p.mnozstvi); add(k && (p.mnozstvi || !item.size) && !k.unknown ? sure : rough, k, p.bezna_cena); }
+    for (const o of p.nabidky){
+      if (!volneFits(item, o)) continue;
+      const k = packs(item, o.mnozstvi); if (!k) continue;
+      const f = obalFit(item, o, p); if (f === false) continue;
+      if (o.sleva > 0 && o.sleva < 90 && !(o.plati_do && o.plati_do < t)) add(sure, k, Math.round(o.cena / (1 - o.sleva / 100) * 10) / 10);
+      if (!usable(o)) continue;
+      const cost = k.n * o.cena;
+      if (!best[o.obchod] || cost < best[o.obchod].cost) best[o.obchod] = {o, p, n: k.n, cost, perKg: !!k.perKg, unknown: !!k.unknown, obalQ: f === 'maybe'};
+    }
+  }
+  const pool = sure.length ? sure : rough;
+  if (pool.length){
+    regular = Object.assign({}, pool.reduce((a, b) => b.cost < a.cost ? b : a), {rough: !sure.length});
+    // běžná cena nemůže být nižší než nejlevnější akce, kterou zrovna vidím
+    const floor = Math.min(...Object.values(best).map(b => b.cost));
+    if (isFinite(floor) && regular.cost < floor){ regular.cost = floor; regular.price = floor / regular.n; }
+    if (!byKg) regular.perKg = false;
+  }
+  return {best, own, regular, nSel, n: item.data.produkty.length};
+}
+
+/* ============================================================
+   VÝPOČET VARIANT
+   ============================================================ */
+function evalSet(shopIds, infos){
+  let total = 0, est = 0; const by = {}, reg = [], unknown = [];
+  for (const {item, info} of infos){
+    let b = null, hasOwn = false;
+    for (const s of shopIds){
+      const x = info.best[s]; if (x && (!b || x.cost < b.cost)) b = x;
+      const w = info.own[s];  if (w){ hasOwn = true; if (!b || w.cost < b.cost) b = w; }
+    }
+    // skutečná cena (z letáku nebo tvoje vlastní) má vždy přednost před odhadem
+    if (b){
+      total += b.cost;
+      const shop = b.own ? b.shop : b.o.obchod;
+      (by[shop] = by[shop] || []).push(Object.assign({item}, b));
+    } else if (info.regular !== null){
+      total += info.regular.cost; est += info.regular.cost;
+      reg.push(Object.assign({item}, info.regular));
+    } else unknown.push(item);
+  }
+  return {total, est, by, reg, unknown, used: shopIds.filter(s => by[s]), set: shopIds};
+}
+function better(a, b){
+  if (!b) return true;
+  if (a.unknown.length !== b.unknown.length) return a.unknown.length < b.unknown.length;   // nejdřív ať nic nechybí
+  if (cents(a.total) !== cents(b.total)) return a.total < b.total;
+  if (cents(a.est) !== cents(b.est)) return a.est < b.est;                                  // při stejné ceně radši skutečné ceny než odhad
+  return a.used.length < b.used.length;
+}
+function subsets(arr, max){
+  const out = [];
+  (function go(start, cur){
+    if (cur.length) out.push(cur.slice());
+    if (cur.length === max) return;
+    for (let i = start; i < arr.length; i++){ cur.push(arr[i]); go(i + 1, cur); cur.pop(); }
+  })(0, []);
+  return out;
+}
+function compute(){
+  const infos = state.items.filter(i => i.data).map(item => ({item, info: itemInfo(item)}));
+  const shops = Object.keys(state.shops).filter(s => state.shops[s].on);
+  if (!infos.length || !shops.length) return {infos, shops};
+  let cheap = null, single = null;
+  for (const set of subsets(shops, state.max)){ const r = evalSet(set, infos); if (better(r, cheap)) cheap = r; }
+  for (const s of shops){ const r = evalSet([s], infos); if (better(r, single)) single = r; }
+  const withKm = shops.filter(s => state.shops[s].km != null).sort((a, b) => state.shops[a].km - state.shops[b].km);
+  const near = withKm.length ? evalSet([withKm[0]], infos) : null;
+  return {infos, shops, cheap, single, near};
+}
+
+/* ============================================================
+   VYKRESLENÍ: SEZNAM
+   ============================================================ */
+function pickHTML(item){
+  const ps = item.data.produkty.map(p => {
+    let min = null, small = false;
+    for (const o of p.nabidky){
+      if (!usable(o) || !volneFits(item, o)) continue;
+      const k = packs(item, o.mnozstvi);
+      if (!k || obalFit(item, o, p) === false){ small = true; continue; }
+      if (!min || k.n * o.cena < min.cost) min = {o, n: k.n, perKg: k.perKg, cost: k.n * o.cena};
+    }
+    return {p, min, small};
+  }).sort((a, b) => (a.min ? a.min.cost : 1e9) - (b.min ? b.min.cost : 1e9));
+  return `<div class="pick">
+    <div class="pick-h"><span>Zaškrtni, co kupuješ. Výběr si zapamatuju i pro příště a beru z něj to nejlevnější.</span>
+      ${item.cur ? `<button class="link" type="button" data-act="forget" data-id="${item.id}">Zapomenout</button>` : ''}
+      <button class="link" type="button" data-act="all" data-id="${item.id}">Vše</button>
+      <button class="link" type="button" data-act="none" data-id="${item.id}">Nic</button></div>
+    <ul>${ps.map(({p, min, small}) => {
+      const on = isSel(item, p);
+      const PP = produceOf(item);
+      const sizes = isPiece(item) || (PP && PP.mode === 'ks') ? '' : [...new Set(p.nabidky.filter(o => volneFits(item, o)).map(o => o.mnozstvi).filter(Boolean).map(fmtSize))].join(', ');
+      const unit = min && min.o.cena_za ? `, ${fmt(min.o.cena_za)} Kč/${esc(min.o.jednotka)}` : '';
+      const where = min ? `${qtyTxt(min.n, min.perKg)} ${esc(shopName(min.o.obchod))}${unit}` : !p.nabidky.length ? 'teď není v žádném letáku' : small ? 'nehodí se velikostí nebo obalem' : 'jen v obchodech, které nemáš zapnuté';
+      return `<li class="${on && min ? '' : 'off'}"><label>
+        <input type="checkbox" data-pick="${item.id}" data-url="${esc(p.url)}" ${on ? 'checked' : ''}>
+        <span class="t">${esc(p.nazev)}<small>${esc(sizes)}${sizes ? ' · ' : ''}${where}</small></span>
+        <span class="pp">${min ? fmt(min.cost) + ' Kč' : ''}</span>
+      </label></li>`;
+    }).join('')}</ul></div>`;
+}
+function ownHTML(item){
+  const mine = ownOf(item), a = parseAmount(item.size), P = produceOf(item);
+  const ids = Object.keys(state.shops).filter(s => state.shops[s].on || mine[s]).sort((x, y) => (state.shops[x].km ?? 1e9) - (state.shops[y].km ?? 1e9));
+  return `<div class="own">
+    <p>Kolik stojí ${P && P.mode === 'kg' ? '1 kg' : '1 ks' + (a ? ' (' + esc(fmtAmount(a)) + ')' : '')} mimo akci? Vyplň jen obchody, kde to víš. Použiju to místo odhadu.</p>
+    ${ids.map(s => `<div class="shop-row"><label for="o-${item.id}-${esc(s)}">${esc(shopName(s))}${mine[s] ? `<small>zapsáno ${dateCz(mine[s].d)}</small>` : ''}</label>
+      <input id="o-${item.id}-${esc(s)}" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Kč" data-own="${item.id}" data-oshop="${esc(s)}" value="${mine[s] ? mine[s].c : ''}"></div>`).join('')}
+  </div>`;
+}
+// Po „Změnit“: když mají vybrané produkty jedinou velikost, nastavím ji; když stará velikost nesedí, zruším ji
+function syncSize(item){
+  if (!item.data || isPiece(item) || produceOf(item)) return;
+  const sizes = new Set();
+  for (const p of item.data.produkty) if (isSel(item, p)) for (const o of p.nabidky){
+    const a = parseAmount(o.mnozstvi); if (a && volneFits(item, o)) sizes.add(a.dim + ':' + a.each);
+  }
+  const cur = parseAmount(item.size);
+  if (sizes.size === 1){ const [dim, v] = [...sizes][0].split(':'); item.size = fmtAmount({v: +v, dim}); }
+  else if (cur && ![...sizes].some(k => { const [dim, v] = k.split(':'); return dim === cur.dim && +v >= cur.v * SIZE_LO && +v <= cur.v * SIZE_HI; })) item.size = '';
+  delete item.min; delete item.max;
+}
+function sizeHTML(item){
+  const P = produceOf(item);
+  if (P && P.mode === 'ks') return `<div class="size"><small>${esc(P.q[0].toUpperCase() + P.q.slice(1))} se prodává na kusy, počítám kusy.</small></div>`;
+  if (P){
+    const tot = wantG(item);
+    const c = v => `<button class="chip" type="button" data-act="vaha" data-id="${item.id}" data-v="${v}" aria-pressed="${tot === v}">${fmtAmount({v, dim: 'g'}, true)}</button>`;
+    return `<div class="size"><b>Kolik:</b>${c(500)}${c(1000)}${c(1500)}${c(2000)}
+      <small>Prodává se na váhu, celkem ${fmtAmount({v: tot, dim: 'g'}, true)}. Tlačítky + a − přidáváš po ${fmtAmount({v: item.vaha || 1000, dim: 'g'}, true)}.</small></div>`;
+  }
+  if (isPiece(item)) return '<div class="size"><small>Pečivo počítám na kusy. Jiný druh napiš do názvu, třeba „cibulový rohlík“ nebo „chleba konzumní“.</small></div>';
+  const cur = parseAmount(item.size), cnt = {}; let drink = false;
+  // velikosti nabízím podle toho, co je vybrané (po „Změnit“ se hned přepnou)
+  const sel = item.data.produkty.filter(p => isSel(item, p));
+  for (const p of (sel.length ? sel : item.data.produkty)) for (const o of p.nabidky){
+    if (!volneFits(item, o)) continue;
+    const a0 = parseAmount(o.mnozstvi); if (!a0) continue;
+    const a = {v: a0.each, dim: a0.dim};          // u balení „6× 1,5 l“ nabízím velikost jedné lahve, ne 9 l
+    if (obalOf(o, p) && isSel(item, p)) drink = true;               // obal nabízím jen u zboží, kde na něm záleží (pivo, limonády)
+    const k = a.dim + ':' + a.v; (cnt[k] = cnt[k] || {a, c: 0}).c++;
+  }
+  const dims = {}; for (const x of Object.values(cnt)) dims[x.a.dim] = (dims[x.a.dim] || 0) + x.c;
+  const dim = cur ? cur.dim : Object.keys(dims).sort((x, y) => dims[y] - dims[x])[0];
+  const chips = Object.values(cnt).filter(x => x.a.dim === dim).sort((x, y) => y.c - x.c).slice(0, 5).sort((x, y) => x.a.v - y.a.v);
+  const kg = dim === 'g' && chips.some(x => x.a.v >= 1000);          // jednotně: buď všechno v g, nebo v kg
+  const msg = item.size && !cur ? '<small class="err">Tomu nerozumím. Napiš třeba 500 g, 1 l nebo 10 ks.</small>'
+    : cur ? `<small>Beru balení od ${fmtAmount({v: cur.v * SIZE_LO, dim: cur.dim}, kg)} do ${fmtAmount({v: cur.v * SIZE_HI, dim: cur.dim}, kg)}. Počet kusů je počet takových balení.</small>`
+    : item.min > 0 ? `<small>Počítám na kusy: 1 ks je jedno balení od ${fmtAmount({v: item.min, dim: 'g'})}${item.max > 0 ? ' do ' + fmtAmount({v: item.max, dim: 'g'}) : ''}.</small>`
+    : '<small>Počítám na kusy: 1 ks je jedno balení, ať je jakkoli velké.</small>';
+  const chip = (act, v, label, on) => `<button class="chip" type="button" data-act="${act}" data-id="${item.id}" data-v="${esc(v)}" aria-pressed="${on}">${esc(label)}</button>`;
+  const obal = drink || item.obal ? `<div class="size"><b>Obal:</b>
+    ${chip('obal', '', 'je mi to jedno', !item.obal)}${Object.keys(OBALY).map(k => chip('obal', k, OBALY[k], item.obal === k)).join('')}
+    ${item.obal ? '<small>Kde leták obal neuvádí, nechávám nabídku ve hře a v plánu na to upozorním.</small>' : ''}</div>` : '';
+  return `<div class="size"><label for="s-${item.id}">Velikost 1 ks:</label>
+    <input id="s-${item.id}" type="text" data-size="${item.id}" value="${esc(item.size || '')}" placeholder="např. 1 kg" maxlength="16" autocomplete="off">
+    ${chips.map(({a}) => chip('size', fmtAmount(a, kg), fmtAmount(a, kg), !!cur && cur.dim === a.dim && cur.v === a.v)).join('')}
+    ${msg}</div>${obal}`;
+}
+// Vytvoří položku z rozpoznaného zápisu a doplní, co si o tom zboží pamatuju
+function makeItem(e, twin){
+  const m = state.mem[norm(e.q)];
+  if (m && twin) e.sel = {};                   // druhý stejný název: zapamatovaný výběr nepřebírám, ať jde vybrat jiný druh
+  if (m && !twin){
+    if ((!e.size || e.auto) && m.size){ e.size = m.size; e.min = m.min; e.max = m.max; }
+    if (!e.obal && m.obal) e.obal = m.obal;
+    if (m.urls && Object.keys(m.urls).length){ e.cur = true; e.sel = {}; for (const u in m.urls) e.sel[u] = true; }
+  }
+  delete e.auto;
+  const item = Object.assign({id: 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e6), sel: {}}, e);
+  remember(item);
+  const mm = state.mem[memKey(item)]; mm.n = (mm.n || 0) + 1;
+  return item;
+}
+function renderExtras(){
+  const inList = new Set(state.items.map(i => norm(i.q)));
+  const favs = Object.entries(state.mem).filter(([k, m]) => m.q && !inList.has(k)).sort((a, b) => (b[1].n || 0) - (a[1].n || 0)).slice(0, 8);
+  $('fav').innerHTML = favs.length ? '<b>Často kupuju:</b>' + favs.map(([k, m]) => `<button class="chip" type="button" data-fav="${esc(k)}">${esc(m.q)}</button>`).join('') : '';
+  const names = Object.keys(state.lists).sort((a, b) => a.localeCompare(b, 'cs'));
+  $('lists').innerHTML = names.length ? names.map(n => `<div class="shop-row"><span>${esc(n)}<small>${state.lists[n].length} ${plural(state.lists[n].length,'položka','položky','položek')}</small></span>
+    <button class="link" type="button" data-lload="${esc(n)}">Načíst</button><button class="rm" type="button" data-ldel="${esc(n)}" aria-label="Smazat seznam ${esc(n)}">×</button></div>`).join('')
+    : '<p class="hint">Zatím žádný. Aktuální seznam si můžeš uložit pod názvem a kdykoli ho načíst znovu.</p>';
+}
+function renderList(){
+  renderExtras();
+  const ul = $('list');
+  if (!state.items.length){ ul.innerHTML = '<li class="empty">Seznam je prázdný. Přidej první položku.</li>'; return; }
+  ul.innerHTML = state.items.map(item => {
+    let sub, cls = '', extra = '', extra2 = '';
+    if (item.loading) sub = 'Hledám v letácích…';
+    else if (item.error){ sub = esc(item.error); cls = 'err'; extra = `<button class="link" type="button" data-act="retry" data-id="${item.id}">Zkusit znovu</button>`; }
+    else {
+      const info = itemInfo(item), has = item.data && item.data.produkty.length;
+      const prices = Object.values(info.best).concat(Object.values(info.own)).map(b => b.cost);
+      const nOwn = Object.keys(ownOf(item)).length;
+      const anyOffer = has && item.data.produkty.some(p => p.nabidky.length);
+      const P = produceOf(item);
+      const what = item.cur ? `tvůj výběr (${info.nSel} ${plural(info.nSel,'produkt','produkty','produktů')})`
+        : item._dk ? 'beru ' + DEFS[item.dk].label
+        : P ? 'beru ' + P.q + (P.mode === 'kg' ? ', celkem ' + fmtAmount({v: wantG(item), dim: 'g'}, true) : '')
+        : item._top && item._top.length ? 'beru ' + item._top[0].nazev + (item._top.length > 1 ? ` a ${item._top.length - 1} ${plural(item._top.length - 1,'podobný','podobné','podobných')}` : '')
+        : info.nSel ? `vybráno ${info.nSel} z ${info.n}` : 'nic přesně neodpovídá, vyber ve „Změnit“';
+      sub = (has ? esc(what) : 'takové zboží jsem nenašel, zkus jiný název')
+          + (prices.length ? `, od ${fmt(Math.min(...prices))} Kč` : !has ? '' : anyOffer ? ', v tvých obchodech teď bez akce' : ', teď není v žádném letáku');
+      extra = '<div class="links">'
+        + (has ? `<button class="link" type="button" data-act="pick" data-id="${item.id}">${openPick === item.id ? 'Zavřít výběr' : 'Změnit'}</button>` : '') + '</div>';
+      if (has) extra2 = sizeHTML(item);
+    }
+    return `<li>
+      <div class="row">
+        <div class="nm"><b>${esc(item.q)}</b><small class="${cls}">${sub}</small>${extra}</div>
+        <div class="step">
+          <button type="button" data-act="dec" data-id="${item.id}" aria-label="Ubrat">−</button>
+          <span>${item.qty}</span>
+          <button type="button" data-act="inc" data-id="${item.id}" aria-label="Přidat">+</button>
+        </div>
+        <button class="rm" type="button" data-act="rm" data-id="${item.id}" aria-label="Odebrat ze seznamu">×</button>
+      </div>
+      ${extra2}
+      ${openPick === item.id && item.data && item.data.produkty.length ? pickHTML(item) : ''}
+    </li>`;
+  }).join('');
+}
+
+/* ============================================================
+   VYKRESLENÍ: NASTAVENÍ
+   ============================================================ */
+function renderSettings(){
+  const ids = Object.keys(state.shops).sort((a, b) =>
+    (state.shops[a].km ?? 1e9) - (state.shops[b].km ?? 1e9) || (b in ZNAME) - (a in ZNAME) || shopName(a).localeCompare(shopName(b), 'cs'));
+  $('setBody').innerHTML = `
+    <p>Zaškrtni obchody, kam chodíš, a u každého, jestli máš jeho věrnostní kartu nebo aplikaci. Ceny jen pro členy počítám pouze tam, kde kartu máš. Vzdálenosti doplním podle polohy.</p>
+    ${ids.map(s => {
+      const sh = state.shops[s];
+      const info = ONLINE.has(s) ? 'e-shop s doručením' : sh.far ? `do ${radius} km jsem pobočku nenašel` : (sh.km != null && sh.adresa ? sh.adresa : '');
+      return `<div class="shop-row">
+      <label><input type="checkbox" data-shop="${esc(s)}" ${sh.on ? 'checked' : ''}><span>${esc(shopName(s))}${info ? `<small>${esc(info)}</small>` : ''}</span></label>
+      <label class="card" title="Mám věrnostní kartu nebo aplikaci tohohle obchodu"><input type="checkbox" data-card="${esc(s)}" ${hasCard(s) ? 'checked' : ''}>karta</label>
+      <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="km" aria-label="Vzdálenost v km: ${esc(shopName(s))}" data-km="${esc(s)}" value="${sh.km ?? ''}">
+    </div>`; }).join('')}
+    <p>Další obchody se tu objeví, jakmile je najdu v letácích.</p>
+    <h3>Co kupuju</h3>
+    <p>Poznám to jen podle názvu produktu. Když obchod takovou variantu nemá, vezmu běžnou a v plánu na to upozorním. U zboží se zapamatovaným výběrem platí tvůj výběr.</p>
+    ${DIETS.map(([k, label]) => `<label class="opt"><input type="checkbox" data-pref="${k}" ${state.prefs[k] ? 'checked' : ''}><span>Dávám přednost: ${label}</span></label>`).join('')}
+    <label class="fld" for="pBrands">Oblíbené značky (oddělené čárkou)</label>
+    <input id="pBrands" type="text" maxlength="200" placeholder="třeba Madeta, Olma" value="${esc(state.prefs.brands)}">
+    <label class="fld" for="pAvoid">Nechci (slova v názvu, oddělená čárkou)</label>
+    <input id="pAvoid" type="text" maxlength="200" placeholder="třeba light, ochucené" value="${esc(state.prefs.avoid)}">
+    <h3>Ostatní</h3>
+    <label class="opt"><input type="checkbox" id="optToday" ${state.today ? 'checked' : ''}><span>Jen akce, které platí už dnes</span></label>`;
+}
+
+/* ============================================================
+   VYKRESLENÍ: VÝSLEDKY
+   ============================================================ */
+function tagHTML(key, label, r, sub, cheapTotal){
+  if (!r) return `<button class="tag" type="button" data-geo><span class="lbl">${label}</span><span class="sub">${sub}</span></button>`;
+  const d = r.total - cheapTotal;
+  const diff = key === 'cheap' ? 'nejnižší cena' : (cents(d) > 0 ? `o ${fmt(d)} Kč víc` : 'stejná cena');
+  return `<button class="tag" type="button" data-variant="${key}" aria-pressed="${state.variant === key}">
+    <span class="lbl">${label}</span>${priceHTML(r.total)}
+    <span class="sub">${sub}</span><span class="diff">${diff}</span>
+  </button>`;
+}
+function rowHTML(key, title, small, price, priceSmall, badges, diff){
+  const done = !!state.checked[key];
+  return `<li class="${done ? 'done' : ''}${diff && diff.length ? ' jinak' : ''}"><label>
+    <input type="checkbox" data-check="${esc(key)}" ${done ? 'checked' : ''}>
+    <span class="t">${title}${badges || ''}${diff && diff.length ? `<em class="diff">${diff.map(esc).join(' · ')}</em>` : ''}<small>${small}</small></span>
+    <span class="pr"><b>${fmt(price)} Kč</b>${priceSmall ? `<small>${priceSmall}</small>` : ''}</span>
+  </label></li>`;
+}
+/* ============================================================
+   HISTORIE CEN: JE TO OPRAVDU SLEVA?
+   ============================================================ */
+const HIST = {};                      // klíč produkt|velikost -> řady z Kupi.cz, 'wait' nebo null
+const histKey = (o, p) => p.url + '|' + (o.mnozstvi || '');
+let histBusy = false;
+// Postupně dotáhne historii pro nabídky, které jsou právě v plánu
+async function loadHistory(rows){
+  if (histBusy) return;
+  const todo = rows.filter(x => !x.own && x.o && x.o.mnozstvi && HIST[histKey(x.o, x.p)] === undefined);
+  if (!todo.length) return;
+  histBusy = true;
+  for (const {o, p} of todo){
+    const k = histKey(o, p); if (HIST[k] !== undefined) continue;
+    HIST[k] = 'wait';
+    try {
+      const slug = (p.url.match(/\/sleva\/([a-z0-9-]+)$/) || [])[1];
+      const d = slug ? await (await fetch('/api/historie?slug=' + slug + '&mnozstvi=' + encodeURIComponent(o.mnozstvi))).json() : {};
+      HIST[k] = d.rady || null;
+    } catch (e) { HIST[k] = null; }
+  }
+  histBusy = false; renderResults();
+}
+// Porovná cenu s nejnižší akční cenou na trhu za posledních 30 dní
+function verdict(o, p){
+  const hst = HIST[histKey(o, p)];
+  if (!hst || hst === 'wait' || !hst.low) return null;
+  const t = todayISO(), from = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const days = hst.low.filter(x => x[0] < t && x[0] >= from && x[1] > 0).map(x => x[1]);
+  if (days.length < 5) return {txt: 'za posledních 30 dní bylo v akci jen zřídka'};
+  const min = Math.min(...days), same = days.filter(x => x <= o.cena + 0.005).length;
+  if (o.cena < min - 0.005) return {badge: 'nejlevnější za 30 dní', cls: 'g'};
+  if (same >= 20) return {badge: o.sleva ? 'sleva jen na oko' : 'běžná akční cena', cls: 'w', txt: `za tuhle cenu nebo míň to někde bylo ${same} z posledních 30 dní`};
+  if (min < o.cena * 0.95) return {txt: `za posledních 30 dní už bylo za ${fmt(min)} Kč`};
+  return {txt: 'cena odpovídá nejlepším akcím za 30 dní'};
+}
+// Co je v plánu jinak, než jsi zadal (jiná velikost, víc kusů, neověřený obal…)
+function diffsFor(row){
+  const {item, o, p, n} = row, d = [];
+  if (row.own || !o) return d;
+  const a = parseAmount(o.mnozstvi), P = produceOf(item);
+  if (row.unknown) d.push('neznám velikost balení');
+  if (row.obalQ) d.push('obal není ověřený');
+  if (!item.cur && item._miss && item._miss.length) d.push('není označené ' + item._miss.join(', '));
+  if (P && P.mode === 'kg'){
+    if (!row.perKg && a){ const got = n * a.v, want = wantG(item);
+      if (Math.abs(got - want) > want * 0.1) d.push(`${fmtAmount({v: got, dim: 'g'}, true)} místo ${fmtAmount({v: want, dim: 'g'}, true)}`); }
+    return d;
+  }
+  const want = isPiece(item) || P ? null : parseAmount(item.size);
+  if (want && a && a.dim === want.dim && Math.abs(a.each - want.v) > want.v * 0.02) d.push(`${fmtAmount({v: a.each, dim: a.dim})} místo ${fmtAmount(want)}`);
+  if (a){
+    const inPack = a.dim === 'ks' && (isPiece(item) || P) ? Math.max(1, a.v) : Math.max(1, Math.round(a.v / a.each));
+    const got = n * inPack;
+    if (got > item.qty) d.push(`${got} ks místo ${item.qty}`);
+  }
+  return d;
+}
+// Shrnutí nad plánem: co chybí a co je jinak
+function alertsHTML(r){
+  const out = [];
+  const miss = r.unknown.map(i => `${i.qty}× ${i.q}`).concat(state.items.filter(i => i.error).map(i => i.q));
+  if (miss.length) out.push(`<p class="chybi">Chybí: ${miss.map(esc).join(', ')}</p>`);
+  const jine = [];
+  for (const s of r.used) for (const row of r.by[s]){ const d = diffsFor(row); if (d.length) jine.push(`${row.item.q} (${d.join(', ')})`); }
+  if (jine.length) out.push(`<p class="jine">Jinak, než jsi zadal: ${jine.map(esc).join('; ')}</p>`);
+  if (r.reg.length) out.push(`<p class="jine">Jen odhad ceny: ${r.reg.map(g => g.item.q).map(esc).join(', ')}. Ve vybraných obchodech to mezi tvým výběrem není, v plánu je to u obchodu, kam jdeš pro nejvíc věcí. Přesnější bude, když u položky klepneš na „Změnit“ a přidáš stejné zboží z dalších obchodů.</p>`);
+  return out.length ? `<div class="alerts">${out.join('')}</div>` : '';
+}
+function planHTML(r){
+  let h = '';
+  const km = s => state.shops[s].km ?? 1e9;
+  // Zboží bez ceny v plánovaných obchodech (jen odhad) zařadím do obchodu, kam jdu pro nejvíc věcí
+  const tgt = r.reg.length ? (r.used.length ? r.used : r.set).slice().sort((a, b) => ((r.by[b] || []).length - (r.by[a] || []).length) || km(a) - km(b))[0] : null;
+  const order = r.used.concat(tgt && !r.used.includes(tgt) ? [tgt] : []).sort((a, b) => km(a) - km(b));
+  for (const s of order){
+    const rows = r.by[s] || [], sh = state.shops[s];
+    const regs = s === tgt ? r.reg : [];
+    const subtotal = rows.reduce((a, x) => a + x.cost, 0) + regs.reduce((a, x) => a + x.cost, 0);
+    const km = ONLINE.has(s) ? 'e-shop s doručením, doprava se platí zvlášť' : sh.km != null ? kmTxt(sh.km) + (sh.adresa ? ' · ' + esc(sh.adresa) : '') : '';
+    h += `<div class="shop"><div class="shop-h"><h3>${esc(shopName(s))}</h3><span class="km">${km}</span>${priceHTML(subtotal)}</div><ul class="rows">`;
+    for (const row of rows){
+      const {item, o, p, n, cost, unknown, obalQ} = row;
+      if (row.own){
+        h += rowHTML(item.id, `${qtyTxt(n, row.perKg)} ${esc(item.q)}`, `tvoje cena mimo akci, zapsaná ${dateCz(row.d)}`, cost, row.perKg ? fmt(row.price) + ' Kč/kg' : n > 1 ? fmt(row.price) + ' Kč/ks' : '', '<span class="badge m">moje cena</span>');
+        continue;
+      }
+      const bits = [];
+      if (o.mnozstvi && !row.perKg && !isPiece(item) && !(produceOf(item) && produceOf(item).mode === 'ks')) bits.push(esc(fmtSize(o.mnozstvi)));
+      if (unknown) bits.push('velikost balení neznám, počítám 1 ks');
+      const ob = obalOf(o, p);
+      if (ob) bits.push(OBALY[ob]); else if (obalQ) bits.push('obal leták neuvádí, ověř si ho');
+      if (o.obchod_nazev && norm(o.obchod_nazev) !== norm(shopName(s))) bits.push('jen ' + esc(o.obchod_nazev));
+      if (o.platnost) bits.push(esc(o.platnost));
+      if (o.poznamka) bits.push(esc(o.poznamka));
+      const link = safeUrl(o.letak) || safeUrl(p.url);
+      if (link) bits.push(`<a href="${esc(link)}" target="_blank" rel="noopener">${o.eshop ? 'otevřít v e-shopu' : 'ověřit v letáku'}</a>`);
+      if (!item.cur && item._miss && item._miss.length) bits.unshift('bez označení „' + item._miss.join(', ') + '“, ověř složení');
+      const v = verdict(o, p);
+      if (v && v.txt) bits.push(v.txt);
+      const badges = (o.sleva ? `<span class="badge">−${o.sleva} %</span>` : '') + (o.klub ? '<span class="badge k">s kartou</span>' : '') + (v && v.badge ? `<span class="badge ${v.cls}">${v.badge}</span>` : '');
+      h += rowHTML(item.id, `${qtyTxt(n, row.perKg)} ${esc(p.nazev)}`, bits.join(' · '), cost, row.perKg ? fmt(o.cena) + ' Kč/kg' : n > 1 ? fmt(o.cena) + ' Kč/ks' : '', badges, diffsFor(row));
+    }
+    for (const row of regs){ const {item, n, price, cost} = row;
+      h += rowHTML(item.id, `${qtyTxt(n, row.perKg)} ${esc(item.q)}`, `cena v ${esc(shopName(s))} je jen odhad, ` + (row.rough ? 'velikost balení neznám' : 'podle běžné ceny z Kupi.cz'), cost,
+        row.perKg ? fmt(price) + ' Kč/kg' : n > 1 ? fmt(price) + ' Kč/ks' : '', '<span class="badge k">odhad</span>', ['jen odhad ceny']); }
+    h += '</ul></div>';
+  }
+  if (r.unknown.length && false)
+    h += `<p class="note">Bez ceny, v součtu chybí: ${r.unknown.map(i => `${i.qty}× ${esc(i.q)}`).join(', ')}. V žádném letáku ani e-shopu jsem to nenašel. Zkus u položky jiný název.</p>`;
+  return h;
+}
+function renderResults(){
+  const el = $('res'), c = compute();
+  if (!state.items.length){ el.innerHTML = '<p class="empty">Přidej položky do seznamu a spočítám, kde nakoupit.</p>'; return; }
+  if (!c.shops.length){ el.innerHTML = '<p class="empty">V nastavení nemáš zapnutý žádný obchod.</p>'; return; }
+  if (!c.infos.length){ el.innerHTML = `<p class="empty">${state.items.some(i => i.loading) ? 'Načítám ceny z letáků…' : 'Zatím nemám žádné ceny.'}</p>`; return; }
+
+  if (state.variant === 'near' && !c.near) state.variant = 'cheap';
+  const n = c.cheap.used.length, sName = shopName(c.single.set[0]);
+  let h = '<div class="tags">'
+    + tagHTML('cheap', 'Nejlevnější', c.cheap, n ? `${n} ${plural(n,'obchod','obchody','obchodů')}` : 'nic není v akci', c.cheap.total)
+    + tagHTML('single', 'Jeden obchod', c.single, esc(sName), c.cheap.total)
+    + (c.near
+        ? tagHTML('near', 'Nejblíž', c.near, `${esc(shopName(c.near.set[0]))}, ${kmTxt(state.shops[c.near.set[0]].km)}`, c.cheap.total)
+        : tagHTML('near', 'Nejblíž', null, state.loc ? `Do ${radius} km jsem žádný zapnutý obchod nenašel` : 'Klepni a zjistím, kde jsi'))
+    + '</div>';
+  h += '<div class="limit"><span>Nejlevnější varianta smí použít nejvýš</span><span class="seg">'
+    + [2,3,4].map(m => `<button type="button" data-max="${m}" aria-pressed="${state.max === m}">${m}</button>`).join('')
+    + '</span><span>obchody</span></div>';
+
+  const r = c[state.variant], extra = r.total - c.cheap.total, save1 = c.single.total - c.cheap.total;
+  let sum;
+  if (state.variant === 'cheap')
+    sum = n > 1 ? `Nákup rozdělený do ${n} obchodů.` + (cents(save1) > 0 ? ` Oproti nákupu v jediném obchodě (${esc(sName)}) ušetříš ${fmt(save1)} Kč.` : '')
+        : n === 1 ? 'Nejlevněji vyjde nakoupit všechno v jednom obchodě.'
+        : 'Nic z tvého seznamu teď v zapnutých obchodech v akci není.';
+  else if (state.variant === 'single')
+    sum = `Všechno na jednom místě: ${esc(sName)}.` + (cents(extra) > 0 ? ` Oproti nejlevnější variantě připlatíš ${fmt(extra)} Kč.` : '');
+  else
+    sum = `Nejbližší obchod: ${esc(shopName(r.set[0]))}, ${kmTxt(state.shops[r.set[0]].km)} vzdušnou čarou.` + (cents(extra) > 0 ? ` Oproti nejlevnější variantě připlatíš ${fmt(extra)} Kč.` : '');
+  if (cents(r.est) > 0) sum += ` Z celkové ceny je ${fmt(r.est)} Kč odhad za zboží mimo akci.`;
+  el.innerHTML = h + `<p class="sum">${sum}</p>` + alertsHTML(r) + planHTML(r);
+  loadHistory([].concat(...Object.values(r.by)));
+}
+function renderStatus(){
+  const busy = state.items.some(i => i.loading);
+  $('refresh').hidden = !state.items.length || busy;
+  $('status').textContent = busy ? 'Načítám ceny…' : '';
+}
+function render(){ renderList(); renderResults(); renderStatus(); save(); $('goList').hidden = !document.querySelector('#res .shop'); }
+
+/* ============================================================
+   NAČÍTÁNÍ CEN ZE SCRAPERU
+   ============================================================ */
+async function load(item, fresh){
+  item.loading = true; item.error = null; render();
+  try {
+    const r = await fetch('/api/hledej?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''));
+    const d = await r.json();
+    if (d.chyba) throw new Error(d.chyba);
+    if (item.cur || (item.dk && DEFS[item.dk] && DEFS[item.dk].slugs)){
+      // zapamatované nebo výchozí produkty stáhnu přímo z jejich stránek: jsou tam všechny akce, i když zrovna žádná není
+      const slugy = item.cur ? Object.keys(item.sel).filter(u => item.sel[u]).map(u => (u.match(/\/sleva\/([a-z0-9-]+)$/) || [])[1]).filter(Boolean) : DEFS[item.dk].slugs;
+      if (slugy.length) try {
+        const pd = await (await fetch('/api/produkty?slugy=' + slugy.join(',') + (fresh ? '&fresh=1' : ''))).json();
+        for (const p of pd.produkty || []){
+          const i = d.produkty.findIndex(x => x.url === p.url);
+          if (i >= 0) d.produkty[i] = p; else d.produkty.push(p);
+        }
+      } catch (e) {}
+    }
+    // běžné ceny z e-shopů (Rohlík, Košík, Tesco, Globus, Lidl)
+    item.eshopErr = null;
+    try {
+      const e = await (await fetch('/api/eshopy?q=' + encodeURIComponent(item.q) + (fresh ? '&fresh=1' : ''))).json();
+      if (e.chyba) throw new Error(e.chyba);
+      const known = new Set(d.produkty.map(p => p.url));
+      for (const p of e.produkty || []) if (!known.has(p.url)) d.produkty.push(p);
+      if (e.chyby && Object.keys(e.chyby).length) item.eshopErr = e.chyby;
+    } catch (e) { item.eshopErr = {vse: errText(e)}; }
+    item.data = d; computeDefault(item);
+    let added = false;
+    for (const p of d.produkty) for (const o of p.nabidky){
+      if (!shopNames[o.obchod]) shopNames[o.obchod] = o.obchod_nazev;
+      if (!state.shops[o.obchod]){ state.shops[o.obchod] = {on: ONLINE.has(o.obchod), km: null}; added = true; }
+    }
+    if (added){ renderSettings(); if (state.loc) fetchShops(); }
+  } catch (e) {
+    item.error = e instanceof TypeError ? 'Nejde se spojit s programem app.py. Běží ještě?' : (e.message || 'Něco se nepovedlo.');
+  }
+  item.loading = false; render();
+}
+
+/* ============================================================
+   POLOHA A NEJBLIŽŠÍ OBCHODY
+   ============================================================ */
+let locMsg = '';
+function renderLoc(){
+  const t = locMsg || (state.loc ? `Poloha: ${state.loc.nazev}.` : 'Poloha není nastavená, variantu Nejblíž zatím neumím spočítat.');
+  $('locTxt').textContent = t; $('locInfo').textContent = t;
+  $('locBtn').textContent = state.loc ? 'Změnit polohu' : 'Nastavit polohu';
+}
+function setLocMsg(t){ locMsg = t; renderLoc(); }
+function openSettings(){ $('set').open = true; $('set').scrollIntoView({block: 'nearest'}); }
+const errText = e => e instanceof TypeError ? 'Nejde se spojit s programem app.py. Běží ještě?' : (e.message || 'Něco se nepovedlo.');
+
+// Zeptá se prohlížeče na polohu (prohlížeč si vyžádá tvoje povolení)
+function locate(){
+  state.locAsked = true; save();
+  if (!navigator.geolocation){ setLocMsg('Tenhle prohlížeč polohu zjistit neumí. Napiš adresu.'); openSettings(); return; }
+  setLocMsg('Zjišťuji polohu…');
+  navigator.geolocation.getCurrentPosition(
+    pos => setLoc(pos.coords.latitude, pos.coords.longitude, 'podle tvého zařízení'),
+    err => { setLocMsg(err.code === 1 ? 'Polohu jsi nepovolil. Místo toho můžeš napsat adresu.' : 'Polohu se nepodařilo zjistit. Napiš adresu.'); openSettings(); },
+    {timeout: 15000, maximumAge: 600000});
+}
+async function locateByAddress(){
+  const a = $('addr').value.trim(); if (!a) return;
+  setLocMsg('Hledám adresu…');
+  try {
+    const d = await (await fetch('/api/poloha?adresa=' + encodeURIComponent(a))).json();
+    if (d.chyba) throw new Error(d.chyba);
+    await setLoc(d.lat, d.lon, d.nazev);
+  } catch (e) { setLocMsg(errText(e)); }
+}
+async function setLoc(lat, lon, nazev){
+  state.loc = {lat: +(+lat).toFixed(3), lon: +(+lon).toFixed(3), nazev};
+  await fetchShops();
+}
+// Zeptá se serveru na nejbližší pobočku každého obchodu a doplní vzdálenosti
+async function fetchShops(){
+  if (!state.loc) return;
+  setLocMsg('Hledám obchody v okolí…');
+  try {
+    const d = await (await fetch(`/api/obchody?lat=${state.loc.lat}&lon=${state.loc.lon}&slugy=` + encodeURIComponent(Object.keys(state.shops).filter(s => !ONLINE.has(s)).join(',')))).json();
+    if (d.chyba) throw new Error(d.chyba);
+    radius = d.polomer_km || radius;
+    for (const s in state.shops){
+      if (ONLINE.has(s)) continue;
+      const sh = state.shops[s], f = d.obchody[s];
+      if (f){
+        sh.km = f.km; sh.adresa = f.adresa || null; sh.far = false;
+        if (sh.auto){ sh.on = true; sh.auto = false; }       // dřív vypnutý jen kvůli vzdálenosti
+      } else {
+        sh.km = null; sh.adresa = null; sh.far = true;
+        if (sh.on){ sh.on = false; sh.auto = true; }         // v okolí není, nepočítat s ním
+      }
+    }
+    locMsg = '';
+  } catch (e) { locMsg = 'Obchody v okolí se nepodařilo najít: ' + errText(e); }
+  renderSettings(); render(); renderLoc();
+}
+
+async function loadAll(fresh){ for (const item of state.items.slice()) if (state.items.includes(item)) await load(item, fresh); }
+
+/* ============================================================
+   OVLÁDÁNÍ
+   ============================================================ */
+function addFromInput(){
+  const text = $('q').value.trim().replace(/\s+/g, ' '); if (!text) return;
+  const e = parseEntry(text);
+  $('q').value = '';
+  if (!e.q) return;
+  // každý zápis je samostatná položka: dvakrát „džus“ = dva různé džusy (třeba Relax a Happy Day)
+  const twin = state.items.some(i => norm(i.q) === norm(e.q));
+  const item = makeItem(e, twin);
+  state.items.unshift(item); openPick = null; load(item);
+}
+$('addBtn').addEventListener('click', addFromInput);
+// Tlačítko se seznamem: skočí rovnou na plán „co kde koupit“ (s odškrtáváním). Když už tam jsi, vrátí tě nahoru.
+$('goList').addEventListener('click', () => {
+  const target = document.querySelector('#res .shop') || $('res');
+  const y = target.getBoundingClientRect().top + window.scrollY - 12;
+  const atList = Math.abs(window.scrollY - Math.min(y, document.documentElement.scrollHeight - innerHeight)) < 60;
+  window.scrollTo({top: atList ? 0 : y, behavior: 'smooth'});
+});
+$('fav').addEventListener('click', e => {
+  const b = e.target.closest('[data-fav]'); if (!b) return;
+  const m = state.mem[b.dataset.fav]; if (!m) return;
+  const item = makeItem(Object.assign(parseEntry(m.q), {q: m.q}), state.items.some(i => norm(i.q) === norm(m.q)));
+  state.items.unshift(item); load(item);
+});
+$('listSave').addEventListener('click', () => {
+  const n = $('listName').value.trim(); if (!n || !state.items.length) return;
+  state.lists[n] = state.items.map(i => ({q: i.q, qty: i.qty, size: i.size || '', obal: i.obal || null, min: i.min, max: i.max, dk: i.dk, pk: i.pk, vaha: i.vaha}));
+  $('listName').value = ''; render();
+});
+$('lists').addEventListener('click', e => {
+  const d = e.target.closest('[data-ldel]'); if (d){ delete state.lists[d.dataset.ldel]; render(); return; }
+  const l = e.target.closest('[data-lload]'); if (!l || !state.lists[l.dataset.lload]) return;
+  state.items = state.lists[l.dataset.lload].map(x => makeItem(Object.assign({}, x)));   // nahradí aktuální seznam
+  state.checked = {}; openPick = openOwn = null; render(); loadAll(false);
+});
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') addFromInput(); });
+$('refresh').addEventListener('click', () => loadAll(true));
+
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const i = state.items.findIndex(x => x.id === b.dataset.id); if (i < 0) return;
+  const item = state.items[i], a = b.dataset.act;
+  if (a === 'inc') item.qty++;
+  if (a === 'dec') item.qty = Math.max(1, item.qty - 1);
+  if (a === 'rm'){ delete state.checked[item.id]; state.items.splice(i, 1); if (openOwn === item.id) openOwn = null; }
+  if (a === 'pick') openPick = openPick === item.id ? null : item.id;
+  if (a === 'own') openOwn = openOwn === item.id ? null : item.id;
+  if (a === 'forget') forget(item);
+  if (a === 'retry'){ load(item, true); return; }
+  if (a === 'size'){ const cur = parseAmount(item.size), nv = parseAmount(b.dataset.v); item.size = cur && nv && cur.dim === nv.dim && cur.v === nv.v ? '' : b.dataset.v; delete item.min; delete item.max; remember(item); }
+  if (a === 'obal'){ item.obal = b.dataset.v || null; remember(item); }
+  if (a === 'vaha'){
+    const P = produceOf(item); if (!P) return;
+    item.vaha = +b.dataset.v; item.qty = 1;
+  }
+  if ((a === 'all' || a === 'none') && item.data){ for (const p of item.data.produkty) item.sel[p.url] = a === 'all'; remember(item, true); }
+  render();
+});
+$('list').addEventListener('change', e => {
+  const z = e.target.closest('[data-size]');
+  if (z){ const it = state.items.find(x => x.id === z.dataset.size); if (it){ it.size = z.value.trim(); delete it.min; delete it.max; remember(it); setTimeout(render, 0); } return; }   // až po dokončení právě probíhajícího překreslení
+  const w = e.target.closest('[data-own]');
+  if (w){
+    const it = state.items.find(x => x.id === w.dataset.own);
+    if (it){
+      const v = parseFloat(String(w.value).replace(',', '.')), k = ownKey(it);
+      const mine = state.own[k] || (state.own[k] = {});
+      if (v > 0) mine[w.dataset.oshop] = {c: v, d: todayISO()}; else delete mine[w.dataset.oshop];
+      if (!Object.keys(mine).length) delete state.own[k];
+      setTimeout(render, 0);
+    }
+    return;
+  }
+  const c = e.target.closest('[data-pick]'); if (!c) return;
+  const item = state.items.find(x => x.id === c.dataset.pick); if (!item) return;
+  item.sel[c.dataset.url] = c.checked; syncSize(item); remember(item, true);
+  const sc = c.closest('ul').scrollTop; render();
+  const ul = document.querySelector('.pick ul'); if (ul) ul.scrollTop = sc;
+});
+
+$('set').addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'addr') return;
+  if (t.dataset.shop){ const sh = state.shops[t.dataset.shop]; sh.on = t.checked; sh.auto = false; }
+  else if (t.dataset.km){ const v = parseFloat(String(t.value).replace(',', '.')); const sh = state.shops[t.dataset.km]; sh.km = v > 0 ? v : null; sh.far = false; sh.adresa = null; }
+  else if (t.dataset.card) state.shops[t.dataset.card].card = t.checked;
+  else if (t.dataset.pref || t.id === 'pBrands' || t.id === 'pAvoid'){
+    if (t.dataset.pref) state.prefs[t.dataset.pref] = t.checked; else state.prefs[t.id === 'pBrands' ? 'brands' : 'avoid'] = t.value;
+    for (const it of state.items) computeDefault(it);
+  }
+  else if (t.id === 'optToday') state.today = t.checked;
+  render();
+});
+
+$('res').addEventListener('click', e => {
+  if (e.target.closest('[data-geo]')){ if (state.loc) openSettings(); else locate(); return; }
+  const t = e.target.closest('[data-variant]'); if (t){ state.variant = t.dataset.variant; renderResults(); save(); return; }
+  const m = e.target.closest('[data-max]'); if (m){ state.max = +m.dataset.max; renderResults(); save(); }
+});
+$('res').addEventListener('change', e => {
+  const c = e.target.closest('[data-check]'); if (!c) return;
+  if (c.checked) state.checked[c.dataset.check] = true; else delete state.checked[c.dataset.check];
+  c.closest('li').classList.toggle('done', c.checked); save();
+});
+
+if (location.protocol === 'file:') $('fileWarn').hidden = false;
+$('geoBtn').addEventListener('click', locate);
+$('addrBtn').addEventListener('click', locateByAddress);
+$('addr').addEventListener('keydown', e => { if (e.key === 'Enter') locateByAddress(); });
+$('locBtn').addEventListener('click', () => { openSettings(); if (!state.loc) locate(); });
+
+// Starší uložené seznamy: holý "chléb" je nově chléb Šumava, holý rohlík obyčejný rohlík
+if (!state.v4){
+  for (const it of state.items){
+    const e = parseEntry(it.q);
+    if (e.dk && !it.cur){ it.dk = e.dk; it.q = e.q; it.sel = {}; }
+    if (isPiece(it)) it.size = '';
+  }
+  state.v4 = true;
+}
+// Nově: e-shopy s doručením a ovoce/zelenina na váhu
+if (!state.v5){
+  for (const s of ONLINE){
+    const sh = state.shops[s];
+    if (!sh) state.shops[s] = {on: true, km: null};
+    else { sh.far = false; sh.km = null; if (sh.auto || sh.far === undefined){ sh.on = true; sh.auto = false; } }
+  }
+  for (const it of state.items) if (!it.pk){
+    const e = parseEntry(it.q);
+    if (e.pk){ it.pk = e.pk; it.vaha = e.vaha; it.size = ''; }
+  }
+  state.v5 = true;
+}
+renderSettings(); render(); renderLoc();
+if (location.protocol !== 'file:'){
+  loadAll(false);
+  if (!state.loc && !state.locAsked) locate();   // při prvním spuštění si aplikace o polohu řekne sama
+}
+</script>
+</body>
+</html>
